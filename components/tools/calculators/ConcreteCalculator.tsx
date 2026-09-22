@@ -1,77 +1,83 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Field, NumInput, Stat, fmt } from "../ui";
+import { Field, SliderInput, Stat, fmt } from "../ui";
+import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
 
-const SAFETY = "#f5b83d";
-const DIM = "#8a8fa0";
-
-/** Isometric slab: top face lighter, length/width/depth labeled. */
-function SlabDiagram({ l, w, tIn }: { l: number; w: number; tIn: number }) {
-  const W = 400;
-  const H = 230;
-  // Fit the footprint into the viewBox.
-  const s = Math.min(200 / Math.max(l, 0.5), 96 / Math.max(w, 0.5), 1.6);
-  const ox = 84;
-  const oy = 96;
-  const L = { x: 190 * s, y: 56 * s };
-  const Wv = { x: 84 * s, y: -48 * s };
-  const D = { x: 0, y: 34 };
-  const P = (bx: number, by: number) => `${bx},${by}`;
-  const O = { x: ox, y: oy };
-  const A = { x: ox + L.x, y: oy + L.y };
-  const B = { x: ox + L.x + Wv.x, y: oy + L.y + Wv.y };
-  const C = { x: ox + Wv.x, y: oy + Wv.y };
-  const Od = { x: O.x + D.x, y: O.y + D.y };
-  const Ad = { x: A.x + D.x, y: A.y + D.y };
-  const Bd = { x: B.x + D.x, y: B.y + D.y };
+/**
+ * True-proportion slab. Footprint and thickness use the real ratios (thickness
+ * clamped so a 4-in slab on a 40-ft driveway is still visible), with a 6-ft
+ * figure standing beside it for scale. Auto-fitted, so it never overflows.
+ */
+function SlabScene({ l, w, tIn }: { l: number; w: number; tIn: number }) {
+  const W = 480;
+  const H = 260;
+  const t = Math.max(tIn / 12, Math.max(l, w) * 0.035); // ft, keep the edge readable
+  const figH = 6;
+  const gap = Math.max(l, w) * 0.12 + 1;
+  const fx = l * 0.5;
+  const fy = w + gap + 0.6;
+  const corners = [...boxCorners(0, 0, 0, l, w, t), ...boxCorners(fx - 0.6, fy - 0.6, 0, 1.2, 1.2, figH)];
+  const pr = fitIso(corners, W, H, 34);
+  const { P } = pr;
+  // labels
+  const lenA = P(0, 0, t);
+  const lenB = P(l, 0, t);
+  const widA = P(l, 0, 0);
+  const widB = P(l, w, 0);
+  const thA = P(l, w, 0);
+  const thB = P(l, w, t);
+  // figure
+  const head = P(fx, fy, figH - 0.4);
+  const neck = P(fx, fy, figH - 0.9);
+  const hip = P(fx, fy, figH * 0.5);
+  const footL = P(fx - 0.4, fy + 0.3, 0);
+  const footR = P(fx + 0.4, fy - 0.3, 0);
+  const handL = P(fx - 0.6, fy + 0.4, figH * 0.5);
+  const handR = P(fx + 0.6, fy - 0.4, figH * 0.5);
+  const sh = P(fx, fy, figH - 1.2);
+  const headR = Math.max(pr.k * 0.4, 3);
+  const grid = Math.max(1, Math.pow(10, Math.floor(Math.log10(Math.max(l, w)))) / 2);
+  const gridLines: string[] = [];
+  for (let gx = grid; gx < l; gx += grid) gridLines.push(pr.pts([gx, 0, t], [gx, w, t]));
+  for (let gy = grid; gy < w; gy += grid) gridLines.push(pr.pts([0, gy, t], [l, gy, t]));
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-6 w-full" role="img" aria-label="Slab diagram">
-      {/* right face */}
+    <IsoStage W={W} H={H} label={`Slab ${fmt(l)} by ${fmt(w)} feet, ${fmt(tIn)} inches thick`}>
+      {/* ground shadow */}
       <polygon
-        points={`${P(A.x, A.y)} ${P(B.x, B.y)} ${P(Bd.x, Bd.y)} ${P(Ad.x, Ad.y)}`}
-        fill="#23262e"
-        stroke={DIM}
-        strokeWidth={1.5}
+        points={pr.pts([-l * 0.05, -w * 0.05, 0], [l * 1.05, -w * 0.05, 0], [l * 1.05, w * 1.05, 0], [-l * 0.05, w * 1.05, 0])}
+        fill="#0f1116"
       />
-      {/* front face */}
-      <polygon
-        points={`${P(O.x, O.y)} ${P(A.x, A.y)} ${P(Ad.x, Ad.y)} ${P(Od.x, Od.y)}`}
-        fill="#2c303a"
-        stroke={DIM}
-        strokeWidth={1.5}
-      />
-      {/* top face */}
-      <polygon
-        points={`${P(O.x, O.y)} ${P(A.x, A.y)} ${P(B.x, B.y)} ${P(C.x, C.y)}`}
-        fill="#3a3f4c"
-        stroke={SAFETY}
-        strokeWidth={2}
-      />
-      {/* length label */}
-      <text x={(Od.x + Ad.x) / 2} y={(Od.y + Ad.y) / 2 + 22} fill={SAFETY} fontSize={14} fontWeight={800} textAnchor="middle">
+      <IsoBox pr={pr} x={0} y={0} z={0} dx={l} dy={w} dz={t} top="#4a4f5c" topStroke={SAFETY} />
+      {gridLines.map((g, i) => (
+        <polyline key={i} points={g} fill="none" stroke="#6b7080" strokeWidth={0.75} opacity={0.5} />
+      ))}
+      {/* figure for scale */}
+      <g stroke="#e6e8eb" strokeWidth={Math.max(pr.k * 0.18, 2)} strokeLinecap="round" fill="none">
+        <line x1={neck.x} y1={neck.y} x2={hip.x} y2={hip.y} />
+        <line x1={hip.x} y1={hip.y} x2={footL.x} y2={footL.y} />
+        <line x1={hip.x} y1={hip.y} x2={footR.x} y2={footR.y} />
+        <line x1={sh.x} y1={sh.y} x2={handL.x} y2={handL.y} />
+        <line x1={sh.x} y1={sh.y} x2={handR.x} y2={handR.y} />
+      </g>
+      <circle cx={head.x} cy={head.y} r={headR} fill="#e6e8eb" />
+      {/* dimension labels */}
+      <text x={(lenA.x + lenB.x) / 2 + 10} y={(lenA.y + lenB.y) / 2 - 10} fill={SAFETY} fontSize={14} fontWeight={800} textAnchor="start">
         {fmt(l)} ft
       </text>
-      {/* width label */}
-      <text x={(A.x + B.x) / 2 + 8} y={(A.y + B.y) / 2 - 8} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle">
+      <text x={(widA.x + widB.x) / 2 + 12} y={(widA.y + widB.y) / 2 - 4} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="start">
         {fmt(w)} ft
       </text>
-      {/* depth label */}
-      <text
-        x={(O.x + Od.x) / 2 - 12}
-        y={(O.y + Od.y) / 2}
-        fill={DIM}
-        fontSize={12}
-        fontWeight={700}
-        textAnchor="middle"
-        transform={`rotate(-90 ${(O.x + Od.x) / 2 - 12} ${(O.y + Od.y) / 2})`}
-      >
-        {fmt(tIn)} in
+      <text x={thA.x + 10} y={(thA.y + thB.y) / 2 + 18} fill={DIM} fontSize={11} fontWeight={700} textAnchor="start">
+        {fmt(tIn)} in thick
       </text>
-    </svg>
+      <text x={W - 12} y={H - 10} fill="#565b64" fontSize={10} fontWeight={700} textAnchor="end">
+        Figure is 6 ft · grid every {fmt(grid)} ft
+      </text>
+    </IsoStage>
   );
 }
 
@@ -129,21 +135,21 @@ export default function ConcreteCalculator() {
 
   return (
     <div>
-      <div className="grid gap-5 sm:grid-cols-3">
-        <Field label="Length" hint="In feet.">
-          <NumInput value={length} onChange={setLength} min={0.5} suffix="ft" ariaLabel="Length in feet" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Field label="Length" hint="Drag, or type an exact figure.">
+          <SliderInput value={length} onChange={setLength} min={1} max={60} step={0.5} suffix="ft" ariaLabel="Length in feet" />
         </Field>
-        <Field label="Width" hint="In feet.">
-          <NumInput value={width} onChange={setWidth} min={0.5} suffix="ft" ariaLabel="Width in feet" />
+        <Field label="Width">
+          <SliderInput value={width} onChange={setWidth} min={1} max={60} step={0.5} suffix="ft" ariaLabel="Width in feet" />
         </Field>
-        <Field label="Thickness" hint="Slab depth in inches — 4 in for patios, 6 in for driveways.">
-          <NumInput value={thick} onChange={setThick} min={1} suffix="in" ariaLabel="Thickness in inches" />
+        <Field label="Thickness" hint="4 in for patios and walkways, 6 in for driveways, 8 in for heavy loads.">
+          <SliderInput value={thick} onChange={setThick} min={2} max={12} step={0.5} suffix="in" ariaLabel="Thickness in inches" />
         </Field>
       </div>
 
       {result ? (
         <div className="mt-2">
-          <SlabDiagram l={result.l} w={result.w} tIn={result.t} />
+          <SlabScene l={result.l} w={result.w} tIn={result.t} />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Stat
               label="Order this much"

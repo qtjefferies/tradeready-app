@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Field, NumInput, Seg, Stat, fmt } from "../ui";
+import { Field, Seg, SliderInput, Stat, fmt } from "../ui";
+import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso, type V3 } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
 
@@ -33,70 +34,96 @@ const SIZES: { label: string; cm: number }[] = [
 /** Ohms per circular-mil-foot, NEC Chapter 9 Table 8 notes. */
 const K: Record<Material, number> = { cu: 12.9, al: 21.2 };
 
-const SAFETY = "#f5b83d";
-const DIM = "#8a8fa0";
-
-/** Schematic of the run: panel → wire (length + size) → load, with the drop visualized. */
-function RunDiagram({
+/**
+ * The run in 3D: panel, conductor, load. The run length is fitted to the
+ * pane; the conductor's thickness is its real diameter relative to the panel
+ * so switching sizes visibly changes the wire. The wire's colour fades from
+ * full at the panel to dimmer at the load in proportion to the drop.
+ */
+function RunScene({
   volts,
   distance,
+  cm,
   sizeLabel,
   materialLabel,
   dropV,
   loadV,
+  pct,
+  target,
 }: {
   volts: number;
   distance: number;
+  cm: number;
   sizeLabel: string;
   materialLabel: string;
   dropV: number;
   loadV: number;
+  pct: number;
+  target: number;
 }) {
-  const W = 440;
-  const H = 216;
-  const x0 = 24;
-  const x1 = W - 24;
-  const yWire = 64;
-  // Voltage bar: full width = source volts; the lost slice is proportional (min 6px so it's visible).
-  const lostFrac = Math.min(Math.max(dropV / volts, 0), 1);
-  const lostW = Math.max(lostFrac * (x1 - x0), dropV > 0 ? 6 : 0);
+  const W = 480;
+  const H = 240;
+  // World units: feet. The panel is ~1.2 ft wide × 2.5 ft tall; the run is
+  // drawn at a fixed 14 ft on screen so the boxes stay readable, and the
+  // real distance goes on the label.
+  const run = 14;
+  const box = { w: 1.2, d: 0.5, h: 2.6 };
+  const dia = Math.sqrt(cm) / 1000; // inches
+  const wireT = Math.max(dia / 12, 0.09); // ft, clamped so 14 AWG is still visible
+  const wireZ = 1.2;
+  const corners = [...boxCorners(0, 0, 0, box.w, box.d, box.h), ...boxCorners(box.w + run, 0, 0, box.w, box.d, box.h), [box.w, -1, -0.6] as V3];
+  const pr = fitIso(corners, W, H, 26);
+  const { P, pts } = pr;
+  const x0 = box.w;
+  const x1 = box.w + run;
+  const y = box.d / 2 - wireT / 2;
+  const over = pct > target;
+  const endColor = over ? "#ea580c" : "#b07a1f";
+  const panelT = P(box.w / 2, box.d, box.h);
+  const loadT = P(x1 + box.w / 2, box.d, box.h);
+  const mid = P((x0 + x1) / 2, box.d, wireZ + wireT);
+  const midBelow = P((x0 + x1) / 2, box.d, 0);
+  const gid = "wireGrad";
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-6 w-full" role="img" aria-label="Voltage drop run diagram">
+    <IsoStage W={W} H={H} label={`${fmt(distance, 0)} foot run of ${sizeLabel} ${materialLabel}, ${fmt(dropV, 1)} volts lost`}>
+      <defs>
+        <linearGradient id={gid} x1={P(x0, y, wireZ).x} x2={P(x1, y, wireZ).x} y1={0} y2={0} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor={SAFETY} />
+          <stop offset="1" stopColor={endColor} />
+        </linearGradient>
+      </defs>
+      {/* floor line */}
+      <polygon points={pts([-0.6, -0.6, 0], [x1 + box.w + 0.6, -0.6, 0], [x1 + box.w + 0.6, box.d + 0.6, 0], [-0.6, box.d + 0.6, 0])} fill="#0f1116" />
+      {/* conductor, drawn as a long thin box */}
+      <IsoBox pr={pr} x={x0} y={y} z={wireZ} dx={run} dy={wireT} dz={wireT} top={`url(#${gid})`} right={endColor} left={endColor} stroke="none" />
       {/* panel */}
-      <rect x={x0} y={yWire - 26} width={64} height={52} rx={8} fill="#1c1f2a" stroke={DIM} strokeWidth={1.5} />
-      <text x={x0 + 32} y={yWire - 6} fill="#fff" fontSize={11} fontWeight={800} textAnchor="middle">
+      <IsoBox pr={pr} x={0} y={0} z={0} dx={box.w} dy={box.d} dz={box.h} top="#3a3f4c" topStroke={SAFETY} />
+      {/* load */}
+      <IsoBox pr={pr} x={x1} y={0} z={0} dx={box.w} dy={box.d} dz={box.h} top="#3a3f4c" topStroke={over ? "#ea580c" : SAFETY} />
+      {/* labels */}
+      <text x={panelT.x} y={panelT.y - 22} fill="#fff" fontSize={11} fontWeight={800} textAnchor="middle">
         PANEL
       </text>
-      <text x={x0 + 32} y={yWire + 12} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
+      <text x={panelT.x} y={panelT.y - 8} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
         {fmt(volts, 0)}V
       </text>
-      {/* load */}
-      <rect x={x1 - 64} y={yWire - 26} width={64} height={52} rx={8} fill="#1c1f2a" stroke={DIM} strokeWidth={1.5} />
-      <text x={x1 - 32} y={yWire - 6} fill="#fff" fontSize={11} fontWeight={800} textAnchor="middle">
+      <text x={loadT.x} y={loadT.y - 22} fill="#fff" fontSize={11} fontWeight={800} textAnchor="middle">
         LOAD
       </text>
-      <text x={x1 - 32} y={yWire + 12} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
+      <text x={loadT.x} y={loadT.y - 8} fill={over ? "#fb923c" : SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
         {fmt(loadV, 1)}V
       </text>
-      {/* wire run */}
-      <line x1={x0 + 64} y1={yWire} x2={x1 - 64} y2={yWire} stroke={SAFETY} strokeWidth={5} strokeLinecap="round" />
-      <text x={(x0 + x1) / 2} y={yWire - 14} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle">
+      <text x={mid.x} y={mid.y - 14} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle">
         {fmt(distance, 0)} ft one-way
       </text>
-      <text x={(x0 + x1) / 2} y={yWire + 26} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle">
-        {sizeLabel} {materialLabel}
+      <text x={midBelow.x} y={midBelow.y + 22} fill={over ? "#fb923c" : SAFETY} fontSize={12} fontWeight={800} textAnchor="middle">
+        {fmt(dropV, 1)}V lost ({fmt(pct, 1)}%)
       </text>
-      {/* voltage bar */}
-      <rect x={x0} y={138} width={x1 - x0} height={26} rx={13} fill="#1c1f2a" />
-      <rect x={x1 - lostW} y={138} width={lostW} height={26} rx={13} fill={SAFETY} opacity={0.9} />
-      <text x={x0} y={182} fill={DIM} fontSize={12} fontWeight={700}>
-        {fmt(volts, 0)}V at the panel
+      <text x={12} y={H - 10} fill={DIM} fontSize={11} fontWeight={700} textAnchor="start">
+        {sizeLabel} {materialLabel} · {fmt(dia, 3)}&quot; dia
       </text>
-      <text x={x1} y={182} fill={SAFETY} fontSize={12} fontWeight={800} textAnchor="end">
-        {fmt(dropV, 1)}V lost ({fmt((dropV / volts) * 100, 1)}%)
-      </text>
-    </svg>
+    </IsoStage>
   );
 }
 
@@ -187,10 +214,10 @@ export default function VoltageDrop() {
           />
         </Field>
         <Field label="Load current" hint="Actual running amps, not the breaker size.">
-          <NumInput value={amps} onChange={setAmps} min={0.1} suffix="A" ariaLabel="Load current in amps" />
+          <SliderInput value={amps} onChange={setAmps} min={1} max={400} step={1} suffix="A" ariaLabel="Load current in amps" />
         </Field>
         <Field label="One-way distance" hint="Panel to load, in feet. The current travels out and back.">
-          <NumInput value={distance} onChange={setDistance} min={1} suffix="ft" ariaLabel="One-way distance in feet" />
+          <SliderInput value={distance} onChange={setDistance} min={5} max={1000} step={5} suffix="ft" ariaLabel="One-way distance in feet" />
         </Field>
         <Field label="Conductor material" hint="Aluminum needs roughly two sizes larger for the same drop.">
           <Seg<Material>
@@ -218,13 +245,16 @@ export default function VoltageDrop() {
 
       {calc ? (
         <>
-          <RunDiagram
+          <RunScene
             volts={calc.V}
             distance={calc.L}
+            cm={calc.rec.cm}
             sizeLabel={calc.rec.label}
             materialLabel={materialName}
             dropV={calc.rec.vd}
             loadV={calc.loadV}
+            pct={calc.rec.pct}
+            target={calc.T}
           />
 
           {calc.maxedOut ? (

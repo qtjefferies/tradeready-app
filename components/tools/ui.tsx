@@ -161,3 +161,61 @@ export function Stat({
     </div>
   );
 }
+
+/**
+ * Slider + number box, kept in sync. The slider is the fast path on a phone;
+ * the box is for exact values (and accepts anything outside the slider's range).
+ */
+export function SliderInput({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+  suffix,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+  ariaLabel: string;
+}) {
+  const n = parseFloat(value);
+  const clamped = isFinite(n) ? Math.min(Math.max(n, min), max) : min;
+  const pct = ((clamped - min) / (max - min)) * 100;
+  return (
+    <div className="flex items-center gap-3">
+      <input
+        type="range"
+        aria-label={`${ariaLabel} slider`}
+        className="range-dark flex-1"
+        style={{ backgroundSize: `${pct}% 100%` }}
+        min={min}
+        max={max}
+        step={step}
+        value={clamped}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <div className="relative w-28 shrink-0 sm:w-32">
+        <input
+          type="number"
+          inputMode="decimal"
+          aria-label={ariaLabel}
+          className={`input-dark w-full text-right ${suffix ? "pr-11" : ""}`}
+          value={value}
+          min={0}
+          step={step}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {suffix ? (
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-bone-500">
+            {suffix}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}

@@ -1,7 +1,72 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Field, NumInput, Stat, fmt } from "../ui";
+import { Field, SliderInput, Stat, fmt } from "../ui";
+import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso } from "../iso";
+
+
+/**
+ * One billable day (8 hours) stacked as pay, overhead and profit, beside a
+ * single billable hour at the rate. Heights are to scale, so dragging the
+ * margin or the hours visibly moves both blocks.
+ */
+function RateScene({ salary, overhead, profit, target, rate }: { salary: number; overhead: number; profit: number; target: number; rate: number }) {
+  const W = 480;
+  const H = 260;
+  const day = rate * 8;
+  const unit = day / 10 || 1; // the day is 10 world units tall
+  const zPay = (day * (salary / target)) / unit;
+  const zOv = (day * (overhead / target)) / unit;
+  const zPr = (day * (profit / target)) / unit;
+  const hourH = 10 / 8;
+  const bw = 3;
+  const gap = 4;
+  const hx = bw + gap;
+  const corners = [...boxCorners(0, 0, 0, bw, bw, 11.4), ...boxCorners(hx, 0, -2.2, bw, bw, hourH + 2.2)];
+  const pr = fitIso(corners, W, H, 30);
+  const { P } = pr;
+  const lab = (z: number) => P(bw, bw, z);
+  const stackTop = P(bw / 2, bw, 10);
+  const hourBase = P(hx + bw / 2, bw, 0);
+  // labels, pushed apart so thin slices don't collide
+  const segs = [
+    { z: zPay / 2, show: zPay > 0, text: `Pay $${fmt((day * salary) / target, 0)}`, color: SAFETY },
+    { z: zPay + zOv / 2, show: zOv > 0, text: `Overhead $${fmt((day * overhead) / target, 0)}`, color: "#c9cdd3" },
+    { z: zPay + zOv + zPr / 2, show: zPr > 0, text: `Profit $${fmt((day * profit) / target, 0)}`, color: "#fb923c" },
+  ]
+    .filter((x) => x.show)
+    .map((x) => ({ ...x, y: lab(x.z).y + 4, x: lab(x.z).x + 10 }));
+  for (let i = 1; i < segs.length; i++) segs[i].y = Math.min(segs[i].y, segs[i - 1].y - 15);
+  return (
+    <IsoStage W={W} H={H} label={`One billable day of ${fmt(day, 0)} dollars split into pay, overhead and profit; one hour at ${fmt(rate)} dollars`}>
+      <polygon points={pr.pts([-0.8, -0.8, 0], [hx + bw + 0.8, -0.8, 0], [hx + bw + 0.8, bw + 0.8, 0], [-0.8, bw + 0.8, 0])} fill="#0f1116" />
+      {zPay > 0 ? <IsoBox pr={pr} x={0} y={0} z={0} dx={bw} dy={bw} dz={zPay} top="#f5b83d" right="#c98e1f" left="#a87515" stroke="#0a0b0d" /> : null}
+      {zOv > 0 ? <IsoBox pr={pr} x={0} y={0} z={zPay} dx={bw} dy={bw} dz={zOv} top="#6b7080" right="#565b64" left="#464a52" stroke="#0a0b0d" /> : null}
+      {zPr > 0 ? <IsoBox pr={pr} x={0} y={0} z={zPay + zOv} dx={bw} dy={bw} dz={zPr} top="#f97316" right="#c2410c" left="#9a3412" stroke="#0a0b0d" /> : null}
+      <IsoBox pr={pr} x={hx} y={0} z={0} dx={bw} dy={bw} dz={hourH} top="#4a4f5c" topStroke={SAFETY} />
+      {segs.map((x) => (
+        <text key={x.text} x={x.x} y={x.y} fill={x.color} fontSize={11} fontWeight={800}>
+          {x.text}
+        </text>
+      ))}
+      <text x={stackTop.x} y={stackTop.y - 30} fill="#fff" fontSize={11} fontWeight={800} textAnchor="middle">
+        ONE BILLABLE DAY
+      </text>
+      <text x={stackTop.x} y={stackTop.y - 16} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
+        ${fmt(day, 0)}
+      </text>
+      <text x={hourBase.x} y={hourBase.y + 20} fill="#fff" fontSize={11} fontWeight={800} textAnchor="middle">
+        ONE HOUR
+      </text>
+      <text x={hourBase.x} y={hourBase.y + 36} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
+        ${fmt(rate)}
+      </text>
+      <text x={hourBase.x} y={hourBase.y + 50} fill={DIM} fontSize={10} fontWeight={700} textAnchor="middle">
+        8 of these make the day
+      </text>
+    </IsoStage>
+  );
+}
 
 export default function HourlyRate() {
   const [salary, setSalary] = useState("75000");
@@ -27,30 +92,31 @@ export default function HourlyRate() {
 
   return (
     <div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <Field label="Pay you want to take home" hint="Your salary for the year, before taxes.">
-          <NumInput value={salary} onChange={setSalary} min={0} suffix="$/yr" ariaLabel="Desired annual salary" />
+          <SliderInput value={salary} onChange={setSalary} min={20000} max={250000} step={1000} suffix="$/yr" ariaLabel="Desired annual salary" />
         </Field>
         <Field
           label="Yearly business overhead"
           hint="Insurance, truck, fuel, tools, phone, software — everything it costs to exist."
         >
-          <NumInput value={overhead} onChange={setOverhead} min={0} suffix="$/yr" ariaLabel="Yearly overhead" />
+          <SliderInput value={overhead} onChange={setOverhead} min={0} max={150000} step={500} suffix="$/yr" ariaLabel="Yearly overhead" />
         </Field>
         <Field label="Profit margin" hint="What's left to grow the business. 10% is a healthy floor.">
-          <NumInput value={margin} onChange={setMargin} min={0} max={100} suffix="%" ariaLabel="Profit margin percent" />
+          <SliderInput value={margin} onChange={setMargin} min={0} max={50} step={1} suffix="%" ariaLabel="Profit margin percent" />
         </Field>
         <Field label="Billable hours per week" hint="Wrench time — not driving, quoting, or paperwork. Be honest.">
-          <NumInput value={hrsWeek} onChange={setHrsWeek} min={1} max={80} suffix="hrs" ariaLabel="Billable hours per week" />
+          <SliderInput value={hrsWeek} onChange={setHrsWeek} min={5} max={60} step={1} suffix="hrs" ariaLabel="Billable hours per week" />
         </Field>
         <Field label="Working weeks per year" hint="52 minus vacation, holidays, and slow weeks.">
-          <NumInput value={weeks} onChange={setWeeks} min={1} max={52} step="1" ariaLabel="Working weeks per year" />
+          <SliderInput value={weeks} onChange={setWeeks} min={20} max={52} step={1} suffix="wks" ariaLabel="Working weeks per year" />
         </Field>
       </div>
 
       {result ? (
-        <div className="mt-6">
-          <div className="grid gap-3 sm:grid-cols-3">
+        <div className="mt-2">
+          <RateScene salary={result.salary} overhead={result.overhead} profit={result.profit} target={result.target} rate={result.rate} />
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Stat
               label="Your hourly rate"
               value={`$${fmt(result.rate)}/hr`}

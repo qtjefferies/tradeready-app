@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckRow, Field, NumInput, Seg, Stat, fmt } from "../ui";
+import { CheckRow, Field, Seg, SliderInput, Stat, fmt } from "../ui";
+import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso, type V3 } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
 
@@ -15,55 +16,105 @@ const INSUL_MULT: Record<Insulation, number> = { good: 0.9, average: 1.0, poor: 
 const SUN_MULT: Record<Sun, number> = { shady: 0.95, average: 1.0, sunny: 1.1 };
 const CLIMATE_LABEL: Record<Climate, string> = { hot: "hot", moderate: "moderate", cold: "cold" };
 
-const SAFETY = "#f5b83d";
-const DIM = "#8a8fa0";
+/**
+ * The space, to scale: a 4:3 room with the real ceiling height, open on the
+ * near sides so you see the floor, and a condenser outside sized to the
+ * tonnage (each ton adds height). Occupants stand on the floor.
+ */
+function RoomScene({
+  sqft,
+  ceilFt,
+  tons,
+  recommended,
+  occ,
+  sun,
+  climate,
+}: {
+  sqft: number;
+  ceilFt: number;
+  tons: number;
+  recommended: number;
+  occ: number;
+  sun: Sun;
+  climate: Climate;
+}) {
+  const W = 480;
+  const H = 270;
+  const L = Math.sqrt(sqft * (4 / 3));
+  const Wd = sqft / L;
+  const h = ceilFt;
+  // condenser: 3 ft square footprint, height grows with tons
+  const uW = Math.max(L * 0.12, 2.6);
+  const uH = Math.min(Math.max(1.6 + recommended * 0.7, 2), h * 1.1);
+  const gap = L * 0.14 + 1.5;
+  const ux = L + gap;
+  const sunPos: V3 = [L * 0.1, -Wd * 0.35, h * 1.35];
+  const corners = [...boxCorners(0, 0, 0, L, Wd, h), ...boxCorners(ux, Wd * 0.55, 0, uW, uW, uH), sunPos, [sunPos[0], sunPos[1], sunPos[2] + h * 0.35] as V3];
+  const pr = fitIso(corners, W, H, 30);
+  const { P, pts } = pr;
+  const people = Math.min(occ, 12);
+  const figs = Array.from({ length: people }, (_, i) => ({
+    x: L * (0.2 + 0.6 * ((i * 0.37) % 1)),
+    y: Wd * (0.2 + 0.6 * ((i * 0.61 + 0.2) % 1)),
+  }));
+  const figH = Math.min(5.8, h * 0.72);
+  const sunGlow = sun === "sunny" ? 1 : sun === "average" ? 0.55 : 0.2;
+  const sunColor = climate === "cold" ? "#9cc7ff" : climate === "hot" ? "#ff8a3d" : SAFETY;
+  const sunAt = P(...sunPos);
+  const label = P(L / 2, Wd, 0);
+  const hlabel = P(0, 0, h / 2);
+  const uTop = P(ux + uW / 2, Wd * 0.55 + uW / 2, uH);
 
-/** Half-donut gauge, 0–5 tons, needle at the load. */
-function TonsGauge({ tons }: { tons: number }) {
-  const cx = 130;
-  const cy = 112;
-  const r = 88;
-  const max = 5;
-  const frac = Math.min(Math.max(tons / max, 0), 1);
-  const ang = Math.PI * (1 - frac);
-  const nx = cx + r * Math.cos(ang);
-  const ny = cy - r * Math.sin(ang);
-  const ticks = [0, 1, 2, 3, 4, 5].map((t) => {
-    const a = Math.PI * (1 - t / max);
-    return {
-      t,
-      x1: cx + (r - 12) * Math.cos(a),
-      y1: cy - (r - 12) * Math.sin(a),
-      x2: cx + r * Math.cos(a),
-      y2: cy - r * Math.sin(a),
-      lx: cx + (r - 26) * Math.cos(a),
-      ly: cy - (r - 26) * Math.sin(a),
-    };
-  });
   return (
-    <svg viewBox="0 0 260 132" className="mx-auto mt-6 w-full max-w-[320px]" role="img" aria-label={`${fmt(tons)} tons`}>
-      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#2c303a" strokeWidth={14} strokeLinecap="round" />
-      <path
-        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${nx} ${ny}`}
-        fill="none"
-        stroke={SAFETY}
-        strokeWidth={14}
-        strokeLinecap="round"
+    <IsoStage W={W} H={H} label={`${fmt(sqft)} square foot room with ${ceilFt} foot ceilings and a ${fmt(recommended)} ton unit`}>
+      {/* sun */}
+      <circle cx={sunAt.x} cy={sunAt.y} r={14} fill={sunColor} opacity={0.15 + sunGlow * 0.25} />
+      <circle cx={sunAt.x} cy={sunAt.y} r={7} fill={sunColor} opacity={0.5 + sunGlow * 0.5} />
+      {/* floor */}
+      <polygon points={pts([0, 0, 0], [L, 0, 0], [L, Wd, 0], [0, Wd, 0])} fill="#1c1f2a" stroke={DIM} strokeWidth={1.5} />
+      {/* far walls: y = 0 and x = 0 */}
+      <polygon points={pts([0, 0, 0], [L, 0, 0], [L, 0, h], [0, 0, h])} fill="#2c303a" stroke={DIM} strokeWidth={1.5} strokeLinejoin="round" />
+      <polygon points={pts([0, 0, 0], [0, Wd, 0], [0, Wd, h], [0, 0, h])} fill="#23262e" stroke={DIM} strokeWidth={1.5} strokeLinejoin="round" />
+      {/* window on the far wall, tinted by sun */}
+      <polygon
+        points={pts([L * 0.3, 0, h * 0.35], [L * 0.6, 0, h * 0.35], [L * 0.6, 0, h * 0.8], [L * 0.3, 0, h * 0.8])}
+        fill={sunColor}
+        opacity={0.12 + sunGlow * 0.35}
+        stroke={DIM}
+        strokeWidth={1}
       />
-      {ticks.map((k) => (
-        <g key={k.t}>
-          <line x1={k.x1} y1={k.y1} x2={k.x2} y2={k.y2} stroke={DIM} strokeWidth={2} />
-          <text x={k.lx} y={k.ly + 4} fill={DIM} fontSize={10} fontWeight={700} textAnchor="middle">
-            {k.t}
-          </text>
-        </g>
-      ))}
-      <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="#fff" strokeWidth={3} strokeLinecap="round" />
-      <circle cx={cx} cy={cy} r={7} fill="#fff" />
-      <text x={cx} y={cy + 2.5} fill="#0a0b0d" fontSize={8} fontWeight={900} textAnchor="middle">
-        T
+      {/* ceiling outline (open) */}
+      <polyline points={pts([L, 0, h], [L, Wd, h], [0, Wd, h])} fill="none" stroke={DIM} strokeWidth={1} strokeDasharray="4 4" />
+      {/* occupants */}
+      {figs.map((f, i) => {
+        const foot = P(f.x, f.y, 0);
+        const top = P(f.x, f.y, figH);
+        const r = Math.max(pr.k * 0.35, 2.5);
+        return (
+          <g key={i}>
+            <line x1={foot.x} y1={foot.y} x2={top.x} y2={top.y + r} stroke="#e6e8eb" strokeWidth={Math.max(pr.k * 0.16, 1.5)} strokeLinecap="round" />
+            <circle cx={top.x} cy={top.y} r={r} fill="#e6e8eb" />
+          </g>
+        );
+      })}
+      {/* condenser */}
+      <IsoBox pr={pr} x={ux} y={Wd * 0.55} z={0} dx={uW} dy={uW} dz={uH} top="#3a3f4c" topStroke={SAFETY} />
+      {/* fan on top */}
+      <ellipse cx={uTop.x} cy={uTop.y} rx={pr.ellipse(uW * 0.36).rx} ry={pr.ellipse(uW * 0.36).ry} fill="none" stroke={SAFETY} strokeWidth={1.5} />
+      <text x={uTop.x} y={uTop.y - Math.max(pr.ellipse(uW * 0.36).ry, 6) - 6} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
+        {fmt(recommended)}-ton
       </text>
-    </svg>
+      {/* labels */}
+      <text x={label.x} y={label.y + 18} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
+        {fmt(sqft)} ft²
+      </text>
+      <text x={hlabel.x - 8} y={hlabel.y} fill={DIM} fontSize={11} fontWeight={700} textAnchor="end">
+        {ceilFt} ft
+      </text>
+      <text x={label.x} y={label.y + 32} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle">
+        {fmt(tons)} tons of cooling load
+      </text>
+    </IsoStage>
   );
 }
 
@@ -89,7 +140,7 @@ export default function BtuCalculator() {
     if (kitchen) btu += 4000;
     const tons = btu / 12000;
     const recommended = Math.ceil(tons * 2) / 2;
-    return { btu: Math.round(btu), tons, recommended, sqft: s, ceil, climate, occ, kitchen };
+    return { btu: Math.round(btu), tons, recommended, sqft: s, ceil, climate, occ, kitchen, sun };
   }, [sqft, ceil, climate, insul, sun, occupants, kitchen]);
 
   const buildPayload = (): ToolQuotePayload | null => {
@@ -123,8 +174,8 @@ export default function BtuCalculator() {
   return (
     <div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Area to cool" hint="Square footage of the space.">
-          <NumInput value={sqft} onChange={setSqft} min={50} suffix="ft²" ariaLabel="Square footage" />
+        <Field label="Area to cool" hint="Square footage of the space — drag or type.">
+          <SliderInput value={sqft} onChange={setSqft} min={100} max={5000} step={50} suffix="ft²" ariaLabel="Square footage" />
         </Field>
         <Field label="Ceiling height">
           <Seg<Ceil>
@@ -176,7 +227,7 @@ export default function BtuCalculator() {
           />
         </Field>
         <Field label="Occupants" hint="People regularly in the space.">
-          <NumInput value={occupants} onChange={setOccupants} min={0} step="1" ariaLabel="Number of occupants" />
+          <SliderInput value={occupants} onChange={setOccupants} min={0} max={12} step={1} ariaLabel="Number of occupants" />
         </Field>
       </div>
       <div className="mt-5">
@@ -190,7 +241,15 @@ export default function BtuCalculator() {
 
       {result ? (
         <div className="mt-2">
-          <TonsGauge tons={result.tons} />
+          <RoomScene
+            sqft={result.sqft}
+            ceilFt={parseInt(result.ceil, 10)}
+            tons={result.tons}
+            recommended={result.recommended}
+            occ={result.occ}
+            sun={result.sun}
+            climate={result.climate}
+          />
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Stat label="Cooling needed" value={`${fmt(result.btu)} BTU/hr`} highlight />
             <Stat label="That's" value={`${fmt(result.tons)} tons`} sub="12,000 BTU/hr = 1 ton" />
