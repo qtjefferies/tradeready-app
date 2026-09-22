@@ -7,7 +7,6 @@ import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
 
 type Tab = "tank" | "tankless";
-type Rise = "40" | "60" | "80";
 
 const TANK_SIZES = [30, 40, 50, 65, 75, 80];
 
@@ -156,7 +155,7 @@ export default function WaterHeater() {
   const [tDishwasher, setTDishwasher] = useState("1");
   const [tLaundry, setTLaundry] = useState("0");
   const [tFaucets, setTFaucets] = useState("1");
-  const [rise, setRise] = useState<Rise>("60");
+  const [rise, setRise] = useState("60");
 
   const tank = useMemo(() => {
     const s = parseInt(showers || "0", 10) || 0;
@@ -315,17 +314,9 @@ export default function WaterHeater() {
             </Field>
           </div>
           <div className="mt-5">
-            <Field label="Temperature rise" hint="Groundwater is colder up north — the unit works harder.">
-              <Seg<Rise>
-                ariaLabel="Temperature rise"
-                value={rise}
-                onChange={setRise}
-                options={[
-                  { value: "40", label: "Warm climate · 40°F" },
-                  { value: "60", label: "Moderate · 60°F" },
-                  { value: "80", label: "Cold climate · 80°F" },
-                ]}
-              />
+            <Field label="Temperature rise" hint="Set-point minus incoming groundwater temperature — colder water makes the unit work harder.">
+              <SliderInput value={rise} onChange={setRise} min={30} max={100} step={5} suffix="°F" ariaLabel="Temperature rise" />
+              <p className="mt-1.5 text-xs text-bone-500">Roughly 40°F in the South, 60°F in the middle, 80°F up north.</p>
             </Field>
           </div>
           <TanklessScene gpm={tankless.gpm} showers={tankless.s} dish={tankless.d} laundry={tankless.l} faucets={tankless.f} rise={rise} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Field, Seg, SliderInput, Stat, fmt } from "../ui";
+import { Field, Seg, SliderInput, Stat, StepSlider, fmt } from "../ui";
 import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso, type V3 } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
@@ -189,7 +189,7 @@ export default function VoltageDrop() {
     <div>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="System voltage" hint="Line voltage at the panel.">
-          <Seg
+          <StepSlider
             ariaLabel="System voltage"
             value={voltage}
             onChange={setVoltage}
@@ -231,15 +231,7 @@ export default function VoltageDrop() {
           />
         </Field>
         <Field label="Max voltage drop" hint="NEC recommends 3% on branch circuits, 5% feeder + branch combined.">
-          <Seg
-            ariaLabel="Maximum voltage drop"
-            value={target}
-            onChange={setTarget}
-            options={[
-              { value: "3", label: "3%" },
-              { value: "5", label: "5%" },
-            ]}
-          />
+          <SliderInput value={target} onChange={setTarget} min={1} max={10} step={0.5} suffix="%" ariaLabel="Maximum voltage drop" />
         </Field>
       </div>
 
@@ -259,7 +251,7 @@ export default function VoltageDrop() {
 
           {calc.maxedOut ? (
             <p className="mt-4 rounded-xl border border-ember-600/50 bg-ember-600/10 p-4 text-sm leading-relaxed text-bone-200">
-              Even 500 kcmil {materialName} drops {fmt(calc.rec.pct, 1)}% on this run — over your {fmt(calc.T, 0)}%
+              Even 500 kcmil {materialName} drops {fmt(calc.rec.pct, 1)}% on this run — over your {fmt(calc.T, 1)}%
               target. Consider a higher voltage, a shorter route, or parallel conductors, and have an engineer review
               it.
             </p>
@@ -269,7 +261,7 @@ export default function VoltageDrop() {
             <Stat
               label="Use this wire"
               value={calc.rec.label}
-              sub={`${materialName} · smallest size under ${fmt(calc.T, 0)}% drop`}
+              sub={`${materialName} · smallest size under ${fmt(calc.T, 1)}% drop`}
               highlight
             />
             <Stat

@@ -219,3 +219,57 @@ export function SliderInput({
     </div>
   );
 }
+
+/**
+ * Slider over a fixed list of options (climate, insulation, standard
+ * voltages). Snaps to each step and shows every option's label under the
+ * track, so it reads like the button row it replaces but drags like a dial.
+ */
+export function StepSlider<T extends string>({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  ariaLabel: string;
+}) {
+  const idx = Math.max(0, options.findIndex((o) => o.value === value));
+  const pct = options.length > 1 ? (idx / (options.length - 1)) * 100 : 0;
+  return (
+    <div>
+      <input
+        type="range"
+        aria-label={ariaLabel}
+        aria-valuetext={options[idx]?.label}
+        className="range-dark"
+        style={{ backgroundSize: `${pct}% 100%` }}
+        min={0}
+        max={options.length - 1}
+        step={1}
+        value={idx}
+        onChange={(e) => onChange(options[parseInt(e.target.value, 10)].value)}
+      />
+      <div className="mt-2 flex justify-between" role="group" aria-label={`${ariaLabel} options`}>
+        {options.map((o, i) => {
+          const active = i === idx;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(o.value)}
+              className={`min-h-[32px] rounded-md px-1.5 text-xs font-bold transition ${
+                active ? "text-safety-300" : "text-bone-500 hover:text-paper"
+              } ${i === 0 ? "text-left" : i === options.length - 1 ? "text-right" : "text-center"}`}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

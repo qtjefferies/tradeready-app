@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckRow, Field, Seg, SliderInput, Stat, fmt } from "../ui";
+import { CheckRow, Field, SliderInput, Stat, StepSlider, fmt } from "../ui";
 import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso, type V3 } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
@@ -9,7 +9,6 @@ import type { ToolQuotePayload } from "@/lib/toolQuote";
 type Climate = "hot" | "moderate" | "cold";
 type Insulation = "good" | "average" | "poor";
 type Sun = "shady" | "average" | "sunny";
-type Ceil = "8" | "9" | "10" | "12";
 
 const CLIMATE_MULT: Record<Climate, number> = { hot: 1.25, moderate: 1.0, cold: 0.85 };
 const INSUL_MULT: Record<Insulation, number> = { good: 0.9, average: 1.0, poor: 1.15 };
@@ -109,7 +108,7 @@ function RoomScene({
         {fmt(sqft)} ft²
       </text>
       <text x={hlabel.x - 8} y={hlabel.y} fill={DIM} fontSize={11} fontWeight={700} textAnchor="end">
-        {ceilFt} ft
+        {fmt(ceilFt)} ft
       </text>
       <text x={label.x} y={label.y + 32} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle">
         {fmt(tons)} tons of cooling load
@@ -120,7 +119,7 @@ function RoomScene({
 
 export default function BtuCalculator() {
   const [sqft, setSqft] = useState("1500");
-  const [ceil, setCeil] = useState<Ceil>("8");
+  const [ceil, setCeil] = useState("8");
   const [climate, setClimate] = useState<Climate>("moderate");
   const [insul, setInsul] = useState<Insulation>("average");
   const [sun, setSun] = useState<Sun>("average");
@@ -133,14 +132,16 @@ export default function BtuCalculator() {
     const occ = Math.max(0, parseInt(occupants || "0", 10) || 0);
     let btu = s * 20;
     btu *= CLIMATE_MULT[climate];
-    btu *= parseInt(ceil, 10) / 8;
+    const ceilFt = parseFloat(ceil);
+    if (!isFinite(ceilFt) || ceilFt <= 0) return null;
+    btu *= ceilFt / 8;
     btu *= INSUL_MULT[insul];
     btu *= SUN_MULT[sun];
     btu += Math.max(0, occ - 2) * 600;
     if (kitchen) btu += 4000;
     const tons = btu / 12000;
     const recommended = Math.ceil(tons * 2) / 2;
-    return { btu: Math.round(btu), tons, recommended, sqft: s, ceil, climate, occ, kitchen, sun };
+    return { btu: Math.round(btu), tons, recommended, sqft: s, ceil: ceilFt, climate, occ, kitchen, sun };
   }, [sqft, ceil, climate, insul, sun, occupants, kitchen]);
 
   const buildPayload = (): ToolQuotePayload | null => {
@@ -151,7 +152,7 @@ export default function BtuCalculator() {
       title: `AC install — ${fmt(result.recommended)}-ton`,
       notes:
         `Load calc: ${fmt(result.btu)} BTU/hr (${fmt(result.tons)} tons) for ${fmt(result.sqft)} ft², ` +
-        `${result.ceil}-ft ceilings, ${CLIMATE_LABEL[result.climate]} climate` +
+        `${fmt(result.ceil)}-ft ceilings, ${CLIMATE_LABEL[result.climate]} climate` +
         `${result.kitchen ? ", kitchen in zone" : ""}.\n` +
         `Quoted at ${fmt(result.recommended)}-ton (rounded up to nearest half-ton).\n` +
         `Add your equipment price and labor below.`,
@@ -177,21 +178,11 @@ export default function BtuCalculator() {
         <Field label="Area to cool" hint="Square footage of the space — drag or type.">
           <SliderInput value={sqft} onChange={setSqft} min={100} max={5000} step={50} suffix="ft²" ariaLabel="Square footage" />
         </Field>
-        <Field label="Ceiling height">
-          <Seg<Ceil>
-            ariaLabel="Ceiling height"
-            value={ceil}
-            onChange={setCeil}
-            options={[
-              { value: "8", label: "8 ft" },
-              { value: "9", label: "9 ft" },
-              { value: "10", label: "10 ft" },
-              { value: "12", label: "12 ft" },
-            ]}
-          />
+        <Field label="Ceiling height" hint="Taller rooms hold more air to cool.">
+          <SliderInput value={ceil} onChange={setCeil} min={7} max={20} step={0.5} suffix="ft" ariaLabel="Ceiling height" />
         </Field>
         <Field label="Climate">
-          <Seg<Climate>
+          <StepSlider<Climate>
             ariaLabel="Climate"
             value={climate}
             onChange={setClimate}
@@ -203,7 +194,7 @@ export default function BtuCalculator() {
           />
         </Field>
         <Field label="Insulation">
-          <Seg<Insulation>
+          <StepSlider<Insulation>
             ariaLabel="Insulation quality"
             value={insul}
             onChange={setInsul}
@@ -215,7 +206,7 @@ export default function BtuCalculator() {
           />
         </Field>
         <Field label="Sun exposure">
-          <Seg<Sun>
+          <StepSlider<Sun>
             ariaLabel="Sun exposure"
             value={sun}
             onChange={setSun}
@@ -243,7 +234,7 @@ export default function BtuCalculator() {
         <div className="mt-2">
           <RoomScene
             sqft={result.sqft}
-            ceilFt={parseInt(result.ceil, 10)}
+            ceilFt={result.ceil}
             tons={result.tons}
             recommended={result.recommended}
             occ={result.occ}
