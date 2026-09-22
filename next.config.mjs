@@ -33,10 +33,25 @@ const securityHeaders = [
 
 const nextConfig = {
   poweredByHeader: false,
-  // The migrate route reads lib/schema.sql at runtime; without this it is
-  // not traced into the serverless bundle and the read fails in production.
-  outputFileTracingIncludes: {
-    "/api/admin/migrate": ["./lib/schema.sql"],
+  /**
+   * Files read at runtime that Next's tracer cannot see.
+   *
+   * pdfkit loads its .afm font metrics from disk when a document is created.
+   * That read is dynamic, so tracing misses it, the files are left out of the
+   * serverless bundle, and every PDF route 500s in production while working
+   * perfectly on a laptop — where node_modules is simply present.
+   *
+   * The migrate route reads lib/schema.sql for the same reason.
+   */
+  // NOTE: on Next 14 this key lives under `experimental`. It moved to the top
+  // level in 15, and setting it there on 14 is silently ignored — the build
+  // succeeds and the files simply aren't in the bundle.
+  experimental: {
+    outputFileTracingIncludes: {
+      "/api/admin/migrate": ["./lib/schema.sql"],
+      "/api/quotes/[id]/pdf": ["./node_modules/pdfkit/js/data/**"],
+      "/api/invoices/[id]/pdf": ["./node_modules/pdfkit/js/data/**"],
+    },
   },
   async headers() {
     return [
