@@ -47,6 +47,28 @@ export const TOOLS: FreeTool[] = [
     teaser: "The smallest wire that keeps drop under 3%",
   },
   {
+    href: "/tools/electrical/ohms-law-calculator",
+    name: "Ohm's law calculator",
+    short: "Ohm's law",
+    trade: "electrical",
+    tag: "Circuits",
+    answers: "Know two of volts, amps, ohms, watts?",
+    blurb:
+      "Enter any two of voltage, current, resistance, and power and get the other two — plus BTU/hr, kWh, and the breaker size after the 80% continuous-load rule.",
+    teaser: "1,500 W at 120 V is 12.5 A and a 20 A breaker",
+  },
+  {
+    href: "/tools/electrical/box-fill-calculator",
+    name: "Box fill calculator",
+    short: "Box fill",
+    trade: "electrical",
+    tag: "NEC 314.16",
+    answers: "Is this box big enough?",
+    blurb:
+      "Count conductors, grounds, clamps, fittings, and devices; get the cubic inches NEC 314.16 requires and every standard metal box that passes, smallest in each family called out.",
+    teaser: "Three 12/2s, a receptacle, and clamps need 22.5 in³",
+  },
+  {
     href: "/tools/hvac/btu-calculator",
     name: "BTU calculator",
     featured: true,
