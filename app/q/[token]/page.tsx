@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getQuoteByToken, markQuoteViewed } from "@/lib/store";
 import { isLikelyBot } from "@/lib/bots";
-import { computeTotals, formatUSD } from "@/lib/money";
+import { computeTotals, formatPct, formatUSD } from "@/lib/money";
 import PublicQuoteActions from "@/components/PublicQuoteActions";
 import { IconCheck, IconWrench } from "@/components/icons";
 
@@ -167,7 +167,7 @@ export default async function PublicQuotePage({
             )}
             {totals.tax > 0 && (
               <div className="flex justify-between">
-                <dt className="text-bone-400">Tax ({quote.tax_pct}%)</dt>
+                <dt className="text-bone-400">Tax ({formatPct(quote.tax_pct)})</dt>
                 <dd className="font-semibold text-bone-200">
                   {formatUSD(totals.tax)}
                 </dd>

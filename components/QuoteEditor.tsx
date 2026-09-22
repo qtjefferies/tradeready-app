@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LineItemsEditor from "./LineItemsEditor";
-import { computeTotals, formatUSD, type LineItem } from "@/lib/money";
+import { computeTotals, formatPct, formatUSD, type LineItem } from "@/lib/money";
 import type { Customer, Quote, QuoteStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
 import QuoteShareLink from "./QuoteShareLink";
@@ -433,7 +433,7 @@ export default function QuoteEditor({
           )}
           {totals.tax > 0 && (
             <div className="flex justify-between">
-              <dt className="text-bone-400">Tax ({taxPct}%)</dt>
+              <dt className="text-bone-400">Tax ({formatPct(taxPct)})</dt>
               <dd className="font-semibold text-bone-200">{formatUSD(totals.tax)}</dd>
             </div>
           )}

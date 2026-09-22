@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { computeTotals, formatUSD, type LineItem } from "./money";
+import { computeTotals, formatPct, formatUSD, type LineItem } from "./money";
 
 /**
  * Branded PDF builder for quotes and invoices.
@@ -155,7 +155,7 @@ function totalsBlock(doc: PDFKit.PDFDocument, items: LineItem[], taxPct: number,
   doc.moveDown(0.4);
   row("Subtotal", formatUSD(t.subtotal));
   if (t.discount > 0) row("Discount", `−${formatUSD(t.discount)}`);
-  if (t.tax > 0) row(`Tax (${taxPct}%)`, formatUSD(t.tax));
+  if (t.tax > 0) row(`Tax (${formatPct(taxPct)})`, formatUSD(t.tax));
   sectionRule(doc);
   row("TOTAL DUE", formatUSD(t.total), true);
 }

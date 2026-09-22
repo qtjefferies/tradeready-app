@@ -82,3 +82,17 @@ export function formatUSD(n: number): string {
     currency: "USD",
   }).format(n);
 }
+
+/**
+ * Format a stored tax percentage for display, e.g. 8.880000114440918 → "8.88%".
+ * Float columns (REAL) don't round-trip decimals exactly, so every raw
+ * `{tax_pct}%` interpolation is a latent "8.880000114440918%" bug — always
+ * go through here instead.
+ */
+export function formatPct(n: number): string {
+  const rounded = Math.round(n * 100) / 100;
+  const text = Number.isInteger(rounded)
+    ? String(rounded)
+    : String(parseFloat(rounded.toFixed(2)));
+  return `${text}%`;
+}

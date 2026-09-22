@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LineItemsEditor from "./LineItemsEditor";
-import { computeTotals, formatUSD, type LineItem } from "@/lib/money";
+import { computeTotals, formatPct, formatUSD, type LineItem } from "@/lib/money";
 import type { Customer, Invoice, InvoiceStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
 import { IconDownload } from "./icons";
@@ -27,10 +27,13 @@ export default function InvoiceEditor({
   initial,
   customers,
   seeded,
+  defaultTaxPct,
 }: {
   initial: Invoice | null;
   customers: Customer[];
   seeded: Partial<Invoice> | null;
+  /** Business default tax %, used only for brand-new invoices not seeded from a quote. */
+  defaultTaxPct?: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -43,7 +46,7 @@ export default function InvoiceEditor({
   const [customerName, setCustomerName] = useState(base?.customer_name ?? "");
   const [status, setStatus] = useState<InvoiceStatus>(initial?.status ?? "unpaid");
   const [lineItems, setLineItems] = useState<LineItem[]>(base?.line_items ?? []);
-  const [taxPct, setTaxPct] = useState<number>(base?.tax_pct ?? 0);
+  const [taxPct, setTaxPct] = useState<number>(base?.tax_pct ?? defaultTaxPct ?? 0);
   const [discount, setDiscount] = useState<number>(base?.discount ?? 0);
   const [notes, setNotes] = useState(base?.notes ?? "");
   const [dueAt, setDueAt] = useState(base?.due_at ?? "");
@@ -327,7 +330,7 @@ export default function InvoiceEditor({
           )}
           {totals.tax > 0 && (
             <div className="flex justify-between">
-              <dt className="text-bone-400">Tax ({taxPct}%)</dt>
+              <dt className="text-bone-400">Tax ({formatPct(taxPct)})</dt>
               <dd className="font-semibold text-bone-200">{formatUSD(totals.tax)}</dd>
             </div>
           )}
