@@ -8,7 +8,7 @@ import { TOOLS, toolsByTrade } from "@/lib/tools";
 export const metadata: Metadata = {
   title: "Free Calculators for the Trades",
   description:
-    "Free trade calculators: voltage drop, BTU/AC sizing, water heater sizing, concrete, and contractor hourly rate. No signup, no paywall — from TradeReady.",
+    "Free trade calculators: voltage drop, wire ampacity, conduit bending, box fill, Ohm's law, AC and furnace BTU sizing, water heater sizing, concrete, and contractor hourly rate. No signup, no paywall — from TradeReady.",
   alternates: { canonical: "/tools" },
 };
 

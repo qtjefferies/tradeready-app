@@ -47,6 +47,17 @@ export const TOOLS: FreeTool[] = [
     teaser: "The smallest wire that keeps drop under 3%",
   },
   {
+    href: "/tools/electrical/conduit-bending-calculator",
+    name: "Conduit bending calculator",
+    short: "Conduit bending",
+    trade: "electrical",
+    tag: "Field math",
+    answers: "Where do the marks go?",
+    blurb:
+      "Offset, 90° stub-up, and three- and four-point saddle marks in fractional inches — multipliers, shrink, and take-up for 1/2\" to 1-1/4\" EMT, with a render of the finished bend.",
+    teaser: "A 6\" offset at 30° needs 12\" between marks",
+  },
+  {
     href: "/tools/electrical/wire-ampacity-calculator",
     name: "Wire ampacity calculator",
     short: "Wire ampacity",

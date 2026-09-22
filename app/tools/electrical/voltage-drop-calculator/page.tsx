@@ -48,19 +48,19 @@ export default function Page() {
       ]}
       related={[
         {
-          href: "/tools/hvac/btu-calculator",
-          name: "BTU calculator",
-          blurb: "Size an AC or furnace from square footage, climate, and insulation.",
+          href: "/tools/electrical/wire-ampacity-calculator",
+          name: "Wire ampacity calculator",
+          blurb: "What a wire can carry after temperature and conduit-fill derating.",
         },
         {
-          href: "/tools/general/concrete-calculator",
-          name: "Concrete calculator",
-          blurb: "Cubic yards to order or bags to buy for any slab.",
+          href: "/tools/electrical/conduit-bending-calculator",
+          name: "Conduit bending calculator",
+          blurb: "Offset, stub, and saddle marks in fractional inches.",
         },
         {
-          href: "/tools/business/hourly-rate-calculator",
-          name: "Hourly rate calculator",
-          blurb: "Find the rate that actually covers your costs and profit.",
+          href: "/tools/electrical/box-fill-calculator",
+          name: "Box fill calculator",
+          blurb: "Cubic inches required and which standard boxes pass.",
         },
       ]}
       ctaTitle="Sized the wire. Now bill for it."
