@@ -14,15 +14,16 @@ export default function Page() {
       trade="General"
       tradeHref="/tools"
       title="Concrete calculator"
-      lede="How much concrete for a slab, patio, or driveway — in cubic yards to order or bags to buy. Enter three dimensions and get an order quantity with waste built in."
+      lede="How much concrete for a slab, footing, pier, or set of steps — in cubic yards to order (rounded to the quarter yard the plant sells) or bags to buy. Enter the dimensions and get an order quantity with waste built in."
       mathTitle="How the math works"
       mathSteps={[
         "Volume = length × width × thickness, with thickness converted from inches to feet. A 10×10 slab at 4 inches is 10 × 10 × (4/12) = 33.3 cubic feet.",
+        "Footings are the same box: length × width × depth, with the inches converted. Round piers are π × (diameter ÷ 2)² × height per tube — a 12-inch sonotube holds 0.785 ft³ per foot. Solid steps stack up: each step from the top is a block one run deep and one more rise tall, so the total is width × rise × run × n(n+1) ÷ 2.",
         "Divide cubic feet by 27 to get cubic yards — the unit ready-mix is sold in.",
-        "Add 10% waste for the order quantity. Forms are never perfect, subgrade is never level, and shorting a pour means a cold joint or a second delivery fee.",
+        "Add 10% waste, then round UP to the next quarter yard, because that's the increment the plant dispatches in. Forms are never perfect, subgrade is never level, and shorting a pour means a cold joint or a second delivery fee.",
         "For bags: divide the cubic footage (plus 5% waste) by the yield per bag — 0.6 ft³ for an 80-lb bag, 0.45 for 60-lb, 0.30 for 40-lb — and round up. You can't buy half a bag.",
       ]}
-      mathNote="Rule of thumb: a full pallet of 80-lb bags (42 bags) yields almost exactly 1 cubic yard. If the job needs more than a yard or two, ready-mix is usually cheaper than bags — and your back will thank you."
+      mathNote="Rule of thumb: a full pallet of 80-lb bags (42 bags) yields almost exactly 1 cubic yard. Under a yard, bags usually beat a truck's short-load fee; over a yard, ready-mix is cheaper — and your back will thank you. Steps are figured solid; if you fill the core with compacted gravel, order less."
       faqs={[
         {
           q: "How many bags of concrete do I need for a 10x10 slab?",

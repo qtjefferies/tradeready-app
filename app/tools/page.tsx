@@ -3,7 +3,7 @@ import Link from "next/link";
 import { IconCheck, IconQuote, IconWrench } from "@/components/icons";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { siteName, siteUrl } from "@/lib/site";
-import { TOOLS, TRADE_LABEL } from "@/lib/tools";
+import { TOOLS, toolsByTrade } from "@/lib/tools";
 
 export const metadata: Metadata = {
   title: "Free Calculators for the Trades",
@@ -78,34 +78,40 @@ export default function ToolsPage() {
           account needed.
         </p>
         <ul className="mt-6 flex flex-wrap justify-center gap-2" aria-label="Trades covered">
-          {TOOLS.map((t) => (
-            <li key={t.href}>
+          {toolsByTrade().map((g) => (
+            <li key={g.trade}>
               <a
-                href={`#${t.trade}`}
-                className="inline-flex min-h-[40px] items-center rounded-full border-2 border-ink-600 bg-ink-800 px-4 text-sm font-bold text-bone-200 transition hover:border-safety-500/50 hover:text-safety-300"
+                href={`#${g.trade}`}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-full border-2 border-ink-600 bg-ink-800 px-4 text-sm font-bold text-bone-200 transition hover:border-safety-500/50 hover:text-safety-300"
               >
-                {TRADE_LABEL[t.trade]}
+                {g.label}
+                <span className="rounded-full bg-ink-950 px-2 py-0.5 text-[11px] text-bone-500">{g.tools.length}</span>
               </a>
             </li>
           ))}
         </ul>
       </div>
 
-      <section className="mt-12" aria-label="All free calculators">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="font-display text-2xl uppercase tracking-wide text-paper">
-            {TOOLS.length} calculators, {TOOLS.length} trades
-          </h2>
-          <p className="shrink-0 text-sm text-bone-500">More on the way</p>
-        </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {TOOLS.map((t) => (
-            <div key={t.href} id={t.trade} className="scroll-mt-24">
-              <ToolCard tool={t} />
+      <div className="mt-12 space-y-12">
+        {toolsByTrade().map((g) => (
+          <section key={g.trade} id={g.trade} className="scroll-mt-24" aria-label={`${g.label} calculators`}>
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="font-display text-2xl uppercase tracking-wide text-paper">
+                {g.label}
+                <span className="ml-3 text-base text-bone-500">
+                  {g.tools.length} {g.tools.length === 1 ? "tool" : "tools"}
+                </span>
+              </h2>
+              <div className="mb-2 h-px flex-1 bg-ink-700" aria-hidden="true" />
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {g.tools.map((t) => (
+                <ToolCard key={t.href} tool={t} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
 
       <section className="mt-14" aria-label="How every tool works">
         <div className="text-center">

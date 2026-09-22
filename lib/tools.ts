@@ -21,6 +21,8 @@ export interface FreeTool {
   blurb: string;
   /** Short blurb for the homepage. */
   teaser: string;
+  /** Shown on the homepage grid (keep to five so the grid stays two rows). */
+  featured?: boolean;
 }
 
 export const TRADE_LABEL: Record<TradeKey, string> = {
@@ -35,6 +37,7 @@ export const TOOLS: FreeTool[] = [
   {
     href: "/tools/electrical/voltage-drop-calculator",
     name: "Voltage drop calculator",
+    featured: true,
     short: "Voltage drop",
     trade: "electrical",
     tag: "Most used",
@@ -46,6 +49,7 @@ export const TOOLS: FreeTool[] = [
   {
     href: "/tools/hvac/btu-calculator",
     name: "BTU calculator",
+    featured: true,
     short: "BTU / AC sizing",
     trade: "hvac",
     tag: "Homeowner favorite",
@@ -57,6 +61,7 @@ export const TOOLS: FreeTool[] = [
   {
     href: "/tools/plumbing/water-heater-sizing-calculator",
     name: "Water heater sizing calculator",
+    featured: true,
     short: "Water heater sizing",
     trade: "plumbing",
     tag: "Pro pick",
@@ -68,6 +73,7 @@ export const TOOLS: FreeTool[] = [
   {
     href: "/tools/general/concrete-calculator",
     name: "Concrete calculator",
+    featured: true,
     short: "Concrete",
     trade: "general",
     tag: "DIY favorite",
@@ -79,6 +85,7 @@ export const TOOLS: FreeTool[] = [
   {
     href: "/tools/business/hourly-rate-calculator",
     name: "Hourly rate calculator",
+    featured: true,
     short: "Hourly rate",
     trade: "business",
     tag: "Shop essential",
@@ -88,3 +95,11 @@ export const TOOLS: FreeTool[] = [
     teaser: "The rate that covers pay, overhead, and profit",
   },
 ];
+
+export const TRADE_ORDER: TradeKey[] = ["electrical", "hvac", "plumbing", "general", "business"];
+
+export function toolsByTrade(): { trade: TradeKey; label: string; tools: FreeTool[] }[] {
+  return TRADE_ORDER.map((trade) => ({ trade, label: TRADE_LABEL[trade], tools: TOOLS.filter((t) => t.trade === trade) })).filter(
+    (g) => g.tools.length > 0
+  );
+}

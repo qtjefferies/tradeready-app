@@ -350,7 +350,7 @@ export default function LandingPage() {
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {TOOLS.map((t) => (
+          {TOOLS.filter((t) => t.featured).map((t) => (
             <ToolCard key={t.href} tool={t} compact />
           ))}
 
@@ -375,7 +375,7 @@ export default function LandingPage() {
               href="/tools"
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-safety-300 transition hover:text-safety-200"
             >
-              See all free tools →
+              See all {TOOLS.length} free tools →
             </Link>
           </div>
         </div>

@@ -31,10 +31,20 @@ export function ToolLayout({
   ctaTitle: string;
   ctaBody: string;
 }) {
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
   return (
     <div className="mx-auto max-w-4xl px-4 pb-20 pt-10 sm:px-6">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="text-xs font-semibold text-bone-500">
+      <nav aria-label="Breadcrumb" className="text-xs font-semibold text-bone-500 print:hidden">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="transition hover:text-paper">
@@ -63,10 +73,13 @@ export function ToolLayout({
       <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-bone-300">{lede}</p>
 
       {/* Calculator */}
-      <div className="card mt-8 p-5 sm:p-8">{children}</div>
+      <div className="card mt-8 p-5 sm:p-8 print:border-0 print:p-0">{children}</div>
+      <p className="hidden text-xs text-bone-500 print:block print:mt-4">
+        Calculated with the free {title.toLowerCase()} at tradeready.app — every result shows its working.
+      </p>
 
       {/* The math */}
-      <section className="card mt-6 p-5 sm:p-8" aria-label="How the math works">
+      <section className="card mt-6 p-5 sm:p-8 print:border-0 print:p-0" aria-label="How the math works">
         <h2 className="font-display text-2xl uppercase tracking-wide text-paper">{mathTitle}</h2>
         <ol className="mt-4 space-y-3">
           {mathSteps.map((s, i) => (
@@ -82,7 +95,7 @@ export function ToolLayout({
       </section>
 
       {/* FAQ */}
-      <section className="mt-6" aria-label="Frequently asked questions">
+      <section className="mt-6 print:hidden" aria-label="Frequently asked questions">
         <h2 className="font-display text-2xl uppercase tracking-wide text-paper">Common questions</h2>
         <div className="mt-4 space-y-3">
           {faqs.map((f, i) => (
@@ -98,7 +111,7 @@ export function ToolLayout({
       </section>
 
       {/* Related tools */}
-      <section className="mt-10" aria-label="More free tools">
+      <section className="mt-10 print:hidden" aria-label="More free tools">
         <div className="flex items-end justify-between gap-4">
           <h2 className="font-display text-2xl uppercase tracking-wide text-paper">More free tools</h2>
           <Link href="/tools" className="shrink-0 text-sm font-bold text-safety-300 transition hover:text-safety-200">
@@ -119,7 +132,7 @@ export function ToolLayout({
       </section>
 
       {/* CTA */}
-      <section className="card mt-10 overflow-hidden p-6 text-center sm:p-10" aria-label="Try TradeReady">
+      <section className="card mt-10 overflow-hidden p-6 text-center sm:p-10 print:hidden" aria-label="Try TradeReady">
         <div className="hazard mx-auto h-2 w-32 rounded-full" aria-hidden="true" />
         <h2 className="mx-auto mt-5 max-w-xl font-display text-3xl uppercase tracking-wide text-paper">
           {ctaTitle}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CheckRow, Field, SliderInput, Stat, StepSlider, fmt } from "../ui";
+import { useMemo } from "react";
+import { useUrlState } from "../useUrlState";
+import { CheckRow, Field, Seg, SliderInput, Stat, StepSlider, fmt } from "../ui";
 import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso, type V3 } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
@@ -14,6 +15,13 @@ const CLIMATE_MULT: Record<Climate, number> = { hot: 1.25, moderate: 1.0, cold: 
 const INSUL_MULT: Record<Insulation, number> = { good: 0.9, average: 1.0, poor: 1.15 };
 const SUN_MULT: Record<Sun, number> = { shady: 0.95, average: 1.0, sunny: 1.1 };
 const CLIMATE_LABEL: Record<Climate, string> = { hot: "hot", moderate: "moderate", cold: "cold" };
+
+type Mode = "cool" | "heat";
+type Afue = "80" | "95";
+/** Heating rule of thumb, BTU/hr output per ft² for an 8-ft ceiling, by climate. */
+const HEAT_BASE: Record<Climate, number> = { hot: 30, moderate: 40, cold: 55 };
+/** Furnaces are sold by input rating, in these standard steps (thousands of BTU/hr). */
+const FURNACE_SIZES = [40, 45, 60, 66, 80, 90, 100, 120, 140];
 
 /**
  * The space, to scale: a 4:3 room with the real ceiling height, open on the
@@ -28,6 +36,7 @@ function RoomScene({
   occ,
   sun,
   climate,
+  heat,
 }: {
   sqft: number;
   ceilFt: number;
@@ -36,6 +45,7 @@ function RoomScene({
   occ: number;
   sun: Sun;
   climate: Climate;
+  heat: { out: number; furnace: number | null } | null;
 }) {
   const W = 480;
   const H = 270;
@@ -44,7 +54,9 @@ function RoomScene({
   const h = ceilFt;
   // condenser: 3 ft square footprint, height grows with tons
   const uW = Math.max(L * 0.12, 2.6);
-  const uH = Math.min(Math.max(1.6 + recommended * 0.7, 2), h * 1.1);
+  const uH = heat
+    ? Math.min(Math.max(2.4 + (heat.furnace ?? 140) / 60, 2.5), h * 1.1)
+    : Math.min(Math.max(1.6 + recommended * 0.7, 2), h * 1.1);
   const gap = L * 0.14 + 1.5;
   const ux = L + gap;
   const sunPos: V3 = [L * 0.1, -Wd * 0.35, h * 1.35];
@@ -65,7 +77,7 @@ function RoomScene({
   const uTop = P(ux + uW / 2, Wd * 0.55 + uW / 2, uH);
 
   return (
-    <IsoStage W={W} H={H} label={`${fmt(sqft)} square foot room with ${ceilFt} foot ceilings and a ${fmt(recommended)} ton unit`}>
+    <IsoStage W={W} H={H} label={`${fmt(sqft)} square foot room with ${fmt(ceilFt)} foot ceilings and a ${heat ? `${heat.furnace ?? "large"}k BTU furnace` : `${fmt(recommended)} ton unit`}`}>
       {/* sun */}
       <circle cx={sunAt.x} cy={sunAt.y} r={14} fill={sunColor} opacity={0.15 + sunGlow * 0.25} />
       <circle cx={sunAt.x} cy={sunAt.y} r={7} fill={sunColor} opacity={0.5 + sunGlow * 0.5} />
@@ -99,9 +111,13 @@ function RoomScene({
       {/* condenser */}
       <IsoBox pr={pr} x={ux} y={Wd * 0.55} z={0} dx={uW} dy={uW} dz={uH} top="#3a3f4c" topStroke={SAFETY} />
       {/* fan on top */}
-      <ellipse cx={uTop.x} cy={uTop.y} rx={pr.ellipse(uW * 0.36).rx} ry={pr.ellipse(uW * 0.36).ry} fill="none" stroke={SAFETY} strokeWidth={1.5} />
+      {heat ? (
+        <polyline points={pr.pts([ux + uW / 2, Wd * 0.55 + uW / 2, uH], [ux + uW / 2, Wd * 0.55 + uW / 2, uH + 1.2])} fill="none" stroke={DIM} strokeWidth={3} strokeLinecap="round" />
+      ) : (
+        <ellipse cx={uTop.x} cy={uTop.y} rx={pr.ellipse(uW * 0.36).rx} ry={pr.ellipse(uW * 0.36).ry} fill="none" stroke={SAFETY} strokeWidth={1.5} />
+      )}
       <text x={uTop.x} y={uTop.y - Math.max(pr.ellipse(uW * 0.36).ry, 6) - 6} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
-        {fmt(recommended)}-ton
+        {heat ? (heat.furnace ? `${heat.furnace}k BTU` : "140k+") : `${fmt(recommended)}-ton`}
       </text>
       {/* labels */}
       <text x={label.x} y={label.y + 18} fill={SAFETY} fontSize={13} fontWeight={800} textAnchor="middle">
@@ -111,20 +127,42 @@ function RoomScene({
         {fmt(ceilFt)} ft
       </text>
       <text x={label.x} y={label.y + 32} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle">
-        {fmt(tons)} tons of cooling load
+        {heat ? `${fmt(heat.out)} BTU/hr heat loss` : `${fmt(tons)} tons of cooling load`}
       </text>
     </IsoStage>
   );
 }
 
 export default function BtuCalculator() {
-  const [sqft, setSqft] = useState("1500");
-  const [ceil, setCeil] = useState("8");
-  const [climate, setClimate] = useState<Climate>("moderate");
-  const [insul, setInsul] = useState<Insulation>("average");
-  const [sun, setSun] = useState<Sun>("average");
-  const [occupants, setOccupants] = useState("2");
-  const [kitchen, setKitchen] = useState(true);
+  const [q, set] = useUrlState({
+    mode: "cool",
+    sqft: "1500",
+    ceil: "8",
+    climate: "moderate",
+    insul: "average",
+    sun: "average",
+    occ: "2",
+    kitchen: "1",
+    afue: "95",
+  });
+  const mode = (q.mode === "heat" ? "heat" : "cool") as Mode;
+  const sqft = q.sqft;
+  const ceil = q.ceil;
+  const climate = (["hot", "moderate", "cold"].includes(q.climate) ? q.climate : "moderate") as Climate;
+  const insul = (["good", "average", "poor"].includes(q.insul) ? q.insul : "average") as Insulation;
+  const sun = (["shady", "average", "sunny"].includes(q.sun) ? q.sun : "average") as Sun;
+  const occupants = q.occ;
+  const kitchen = q.kitchen !== "0";
+  const afue = (q.afue === "80" ? "80" : "95") as Afue;
+  const setMode = set("mode") as (v: Mode) => void;
+  const setSqft = set("sqft");
+  const setCeil = set("ceil");
+  const setClimate = set("climate") as (v: Climate) => void;
+  const setInsul = set("insul") as (v: Insulation) => void;
+  const setSun = set("sun") as (v: Sun) => void;
+  const setOccupants = set("occ");
+  const setKitchen = (v: boolean) => set("kitchen")(v ? "1" : "0");
+  const setAfue = set("afue") as (v: Afue) => void;
 
   const result = useMemo(() => {
     const s = parseFloat(sqft);
@@ -141,11 +179,61 @@ export default function BtuCalculator() {
     if (kitchen) btu += 4000;
     const tons = btu / 12000;
     const recommended = Math.ceil(tons * 2) / 2;
-    return { btu: Math.round(btu), tons, recommended, sqft: s, ceil: ceilFt, climate, occ, kitchen, sun };
-  }, [sqft, ceil, climate, insul, sun, occupants, kitchen]);
+    // Oversizing warning: a unit more than ~15% over the load short-cycles
+    // and pulls less humidity, which is the more common field mistake.
+    const oversizePct = ((recommended - tons) / tons) * 100;
+
+    // Heating: output BTU/hr from the climate rule of thumb, scaled the same
+    // way for volume and envelope; sun cuts the heating load a little.
+    let heatOut = s * HEAT_BASE[climate];
+    heatOut *= ceilFt / 8;
+    heatOut *= INSUL_MULT[insul];
+    heatOut *= sun === "sunny" ? 0.95 : sun === "shady" ? 1.05 : 1;
+    const afueFrac = parseInt(afue, 10) / 100;
+    const heatIn = heatOut / afueFrac;
+    const furnace = FURNACE_SIZES.find((k) => k * 1000 * afueFrac >= heatOut) ?? null;
+    return {
+      btu: Math.round(btu),
+      tons,
+      recommended,
+      oversizePct,
+      sqft: s,
+      ceil: ceilFt,
+      climate,
+      occ,
+      kitchen,
+      sun,
+      heatOut: Math.round(heatOut),
+      heatIn: Math.round(heatIn),
+      furnace,
+      afue: afueFrac,
+    };
+  }, [sqft, ceil, climate, insul, sun, occupants, kitchen, afue]);
 
   const buildPayload = (): ToolQuotePayload | null => {
     if (!result) return null;
+    if (mode === "heat") {
+      return {
+        source: "BTU calculator",
+        sourceHref: "/tools/hvac/btu-calculator",
+        title: `Furnace install — ${result.furnace ? `${result.furnace}k BTU` : "over 140k BTU"}`,
+        notes:
+          `Heat loss estimate: ${fmt(result.heatOut)} BTU/hr output for ${fmt(result.sqft)} ft², ` +
+          `${fmt(result.ceil)}-ft ceilings, ${CLIMATE_LABEL[result.climate]} climate, ${insul} insulation.\n` +
+          `At ${afue}% AFUE that is ${fmt(result.heatIn)} BTU/hr input → ${result.furnace ? `${result.furnace},000 BTU/hr` : "two-stage or multiple"} furnace.\n` +
+          `Rule-of-thumb estimate — confirm with a Manual J before ordering equipment.\n` +
+          `Add your equipment price and labor below.`,
+        lines: [
+          {
+            description: `${result.furnace ? `${result.furnace}k BTU/hr` : "High-output"} ${afue}% AFUE furnace — per load estimate`,
+            qty: 1,
+            unit_price: 0,
+            kind: "materials",
+          },
+          { description: "Furnace installation labor", qty: 1, unit_price: 0, kind: "labor" },
+        ],
+      };
+    }
     return {
       source: "BTU calculator",
       sourceHref: "/tools/hvac/btu-calculator",
@@ -155,6 +243,7 @@ export default function BtuCalculator() {
         `${fmt(result.ceil)}-ft ceilings, ${CLIMATE_LABEL[result.climate]} climate` +
         `${result.kitchen ? ", kitchen in zone" : ""}.\n` +
         `Quoted at ${fmt(result.recommended)}-ton (rounded up to nearest half-ton).\n` +
+        `Rule-of-thumb estimate — confirm with a Manual J before ordering equipment.\n` +
         `Add your equipment price and labor below.`,
       lines: [
         {
@@ -169,13 +258,24 @@ export default function BtuCalculator() {
   };
 
   const resultText = result
-    ? `AC sizing: ${fmt(result.sqft)} ft² needs ${fmt(result.btu)} BTU/hr (${fmt(result.tons)} tons) → shop for a ${fmt(result.recommended)}-ton unit.`
+    ? mode === "heat"
+      ? `Furnace sizing: ${fmt(result.sqft)} ft² in a ${CLIMATE_LABEL[result.climate]} climate needs about ${fmt(result.heatOut)} BTU/hr output → ${result.furnace ? `${result.furnace}k BTU/hr` : "over 140k BTU/hr"} input at ${afue}% AFUE (rule of thumb; confirm with Manual J).`
+      : `AC sizing: ${fmt(result.sqft)} ft² needs ${fmt(result.btu)} BTU/hr (${fmt(result.tons)} tons) → shop for a ${fmt(result.recommended)}-ton unit (rule of thumb; confirm with Manual J).`
     : "";
 
   return (
     <div>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Area to cool" hint="Square footage of the space — drag or type.">
+      <Seg<Mode>
+        ariaLabel="Cooling or heating"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "cool", label: "Cooling — what size AC?" },
+          { value: "heat", label: "Heating — what size furnace?" },
+        ]}
+      />
+      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+        <Field label={mode === "heat" ? "Area to heat" : "Area to cool"} hint="Square footage of the space — drag or type.">
           <SliderInput value={sqft} onChange={setSqft} min={100} max={5000} step={50} suffix="ft²" ariaLabel="Square footage" />
         </Field>
         <Field label="Ceiling height" hint="Taller rooms hold more air to cool.">
@@ -221,14 +321,30 @@ export default function BtuCalculator() {
           <SliderInput value={occupants} onChange={setOccupants} min={0} max={12} step={1} ariaLabel="Number of occupants" />
         </Field>
       </div>
-      <div className="mt-5">
-        <CheckRow
-          checked={kitchen}
-          onChange={setKitchen}
-          label="Includes a kitchen"
-          hint="Kitchens throw a lot of heat — adds 4,000 BTU/hr"
-        />
-      </div>
+      {mode === "cool" ? (
+        <div className="mt-5">
+          <CheckRow
+            checked={kitchen}
+            onChange={setKitchen}
+            label="Includes a kitchen"
+            hint="Kitchens throw a lot of heat — adds 4,000 BTU/hr"
+          />
+        </div>
+      ) : (
+        <div className="mt-5">
+          <Field label="Furnace efficiency (AFUE)" hint="Furnaces are sold by input BTU. Output = input × AFUE, so a 95% unit can be a size smaller.">
+            <Seg<Afue>
+              ariaLabel="Furnace efficiency"
+              value={afue}
+              onChange={setAfue}
+              options={[
+                { value: "80", label: "80% standard" },
+                { value: "95", label: "95% condensing" },
+              ]}
+            />
+          </Field>
+        </div>
+      )}
 
       {result ? (
         <div className="mt-2">
@@ -240,16 +356,47 @@ export default function BtuCalculator() {
             occ={result.occ}
             sun={result.sun}
             climate={result.climate}
+            heat={mode === "heat" ? { out: result.heatOut, furnace: result.furnace } : null}
           />
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <Stat label="Cooling needed" value={`${fmt(result.btu)} BTU/hr`} highlight />
-            <Stat label="That's" value={`${fmt(result.tons)} tons`} sub="12,000 BTU/hr = 1 ton" />
-            <Stat
-              label="Shop for"
-              value={`${fmt(result.recommended)}-ton`}
-              sub="Rounded up to the nearest half-ton — undersized units never catch up"
-            />
-          </div>
+          {mode === "cool" ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <Stat label="Cooling load" value={`${fmt(result.btu)} BTU/hr`} highlight />
+              <Stat label="That's" value={`${fmt(result.tons)} tons`} sub="12,000 BTU/hr = 1 ton" />
+              <Stat
+                label="Shop for"
+                value={`${fmt(result.recommended)}-ton`}
+                sub={
+                  result.oversizePct > 15
+                    ? `Next half-ton up is ${fmt(result.oversizePct, 0)}% over the load — consider the half-ton below with a variable-speed unit`
+                    : "Nearest half-ton up. Don't go bigger: oversized units short-cycle and leave the house clammy"
+                }
+              />
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <Stat label="Heat loss (output needed)" value={`${fmt(result.heatOut)} BTU/hr`} highlight />
+              <Stat
+                label={`Input at ${afue}% AFUE`}
+                value={`${fmt(result.heatIn)} BTU/hr`}
+                sub="Furnaces are rated by input — this is the number on the nameplate"
+              />
+              <Stat
+                label="Shop for"
+                value={result.furnace ? `${result.furnace}k BTU` : "Over 140k"}
+                sub={
+                  result.furnace
+                    ? `Smallest standard input whose output (${fmt(result.furnace * 1000 * result.afue, 0)}) clears the load`
+                    : "Beyond a single residential furnace — look at two units or a two-stage commercial unit"
+                }
+              />
+            </div>
+          )}
+          <p className="mt-4 rounded-xl border border-ink-600 bg-ink-900 p-4 text-sm leading-relaxed text-bone-400">
+            <span className="font-bold text-paper">This is a rule-of-thumb estimate,</span> good for a ballpark
+            quote and for catching a badly sized unit. It doesn&apos;t see window area, orientation, duct leakage, or
+            infiltration. Final equipment selection should come from an ACCA Manual J load calculation — most
+            jurisdictions require one for the permit, and it is what separates a right-sized system from a callback.
+          </p>
           <QuoteBridge buildPayload={buildPayload} resultText={resultText} />
         </div>
       ) : (

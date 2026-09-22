@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { siteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -12,5 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/dashboard", "/api", "/q"],
       },
     ],
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

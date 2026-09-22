@@ -1,14 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useUrlState } from "../useUrlState";
 import { Field, Seg, SliderInput, Stat, fmt } from "../ui";
 import { DIM, INK, IsoBox, IsoCylinder, IsoStage, SAFETY, boxCorners, fitIso } from "../iso";
 import QuoteBridge from "../QuoteBridge";
 import type { ToolQuotePayload } from "@/lib/toolQuote";
 
 type Tab = "tank" | "tankless";
+type Fuel = "gas" | "electric";
 
 const TANK_SIZES = [30, 40, 50, 65, 75, 80];
+
+/**
+ * Typical first-hour ratings (gallons of hot water in the first hour of
+ * use, tank plus recovery) by size and fuel, from current residential
+ * EnergyGuide labels. Gas recovers roughly twice as fast as electric, which
+ * is why a 50-gal gas heater out-delivers a 65-gal electric. Pros size on
+ * this number, not on tank capacity — the DOE worksheet says the FHR should
+ * be within a gallon or two of the peak-hour demand.
+ */
+const FHR: Record<Fuel, Record<number, number>> = {
+  gas: { 30: 58, 40: 70, 50: 85, 65: 100, 75: 115, 80: 122 },
+  electric: { 30: 42, 40: 52, 50: 62, 65: 76, 75: 82, 80: 88 },
+};
 
 /** Real tank proportions by size (diameter × height, inches), typical residential. */
 const TANK_DIMS: Record<number, [number, number]> = {
@@ -24,7 +39,7 @@ const TANK_DIMS: Record<number, [number, number]> = {
  * The tank you'd install, drawn at its real diameter and height beside a
  * 6-ft figure, filled to the peak-hour draw so you can see the headroom.
  */
-function TankScene({ gallons, peak }: { gallons: number; peak: number }) {
+function TankScene({ gallons, peak, fhr, fuel }: { gallons: number; peak: number; fhr: number; fuel: Fuel }) {
   const W = 480;
   const H = 280;
   const [dIn, hIn] = TANK_DIMS[gallons] ?? [24, 60];
@@ -51,7 +66,7 @@ function TankScene({ gallons, peak }: { gallons: number; peak: number }) {
   const { rx } = pr.ellipse(r);
   const stroke = Math.max(pr.k * 0.18, 2);
   return (
-    <IsoStage W={W} H={H} label={`${gallons} gallon tank, filled to ${fmt(peak)} gallons of peak demand`}>
+    <IsoStage W={W} H={H} label={`${gallons} gallon ${fuel} tank, first-hour rating about ${fhr} gallons, peak demand ${fmt(peak)} gallons`}>
       <ellipse cx={P(0, 0, 0).x} cy={P(0, 0, 0).y + 4} rx={rx * 1.25} ry={pr.ellipse(r).ry * 1.25} fill="#0f1116" />
       <IsoCylinder pr={pr} cx={0} cy={0} z={0} r={r} h={h} level={level} body={INK.right} top="#4a4f5c" />
       {/* hot-out / cold-in stubs */}
@@ -68,10 +83,10 @@ function TankScene({ gallons, peak }: { gallons: number; peak: number }) {
       <circle cx={head.x} cy={head.y} r={Math.max(pr.k * 0.4, 3)} fill="#e6e8eb" />
       {/* labels */}
       <text x={cap.x} y={cap.y - pr.ellipse(r).ry - 22} fill={SAFETY} fontSize={15} fontWeight={800} textAnchor="middle">
-        {gallons} gal tank
+        {gallons} gal {fuel}
       </text>
       <text x={cap.x} y={cap.y - pr.ellipse(r).ry - 8} fill={DIM} fontSize={10} fontWeight={700} textAnchor="middle">
-        {dIn}&quot; × {hIn}&quot;
+        {dIn}&quot; × {hIn}&quot; · FHR ≈ {fhr} gal
       </text>
       <text x={lvl.x - rx - 8} y={lvl.y + 4} fill={SAFETY} fontSize={12} fontWeight={800} textAnchor="end">
         {fmt(peak)} gal peak hour
@@ -146,27 +161,57 @@ function TanklessScene({ gpm, showers, dish, laundry, faucets, rise }: { gpm: nu
 
 
 export default function WaterHeater() {
-  const [tab, setTab] = useState<Tab>("tank");
-  const [showers, setShowers] = useState("2");
-  const [dishwasher, setDishwasher] = useState("1");
-  const [laundry, setLaundry] = useState("1");
-
-  const [tShowers, setTShowers] = useState("2");
-  const [tDishwasher, setTDishwasher] = useState("1");
-  const [tLaundry, setTLaundry] = useState("0");
-  const [tFaucets, setTFaucets] = useState("1");
-  const [rise, setRise] = useState("60");
+  const [q, set] = useUrlState({
+    type: "tank",
+    fuel: "gas",
+    sh: "2",
+    dw: "1",
+    ld: "1",
+    bath: "0",
+    tsh: "2",
+    tdw: "1",
+    tld: "0",
+    tf: "1",
+    rise: "60",
+  });
+  const tab = (q.type === "tankless" ? "tankless" : "tank") as Tab;
+  const fuel = (q.fuel === "electric" ? "electric" : "gas") as Fuel;
+  const showers = q.sh;
+  const dishwasher = q.dw;
+  const laundry = q.ld;
+  const baths = q.bath;
+  const tShowers = q.tsh;
+  const tDishwasher = q.tdw;
+  const tLaundry = q.tld;
+  const tFaucets = q.tf;
+  const rise = q.rise;
+  const setTab = set("type") as (v: Tab) => void;
+  const setFuel = set("fuel") as (v: Fuel) => void;
+  const setShowers = set("sh");
+  const setDishwasher = set("dw");
+  const setLaundry = set("ld");
+  const setBaths = set("bath");
+  const setTShowers = set("tsh");
+  const setTDishwasher = set("tdw");
+  const setTLaundry = set("tld");
+  const setTFaucets = set("tf");
+  const setRise = set("rise");
 
   const tank = useMemo(() => {
     const s = parseInt(showers || "0", 10) || 0;
     const d = parseInt(dishwasher || "0", 10) || 0;
     const l = parseInt(laundry || "0", 10) || 0;
-    // Hot-water draw per use in the busiest hour: shower ~10 gal, dishwasher ~6, laundry ~7.
-    const peak = s * 10 + d * 6 + l * 7;
-    const target = peak * 1.25;
-    const recommended = TANK_SIZES.find((t) => t >= target) ?? 80;
-    return { peak, recommended, s, d, l };
-  }, [showers, dishwasher, laundry]);
+    const b = parseInt(baths || "0", 10) || 0;
+    // Hot-water draw per use in the busiest hour (DOE worksheet, modern
+    // fixtures): shower ~10 gal, bath ~15, dishwasher ~6, warm-wash laundry ~7.
+    const peak = s * 10 + b * 15 + d * 6 + l * 7;
+    const table = FHR[fuel];
+    const recommended = TANK_SIZES.find((t) => table[t] >= peak) ?? null;
+    const fhr = recommended ? table[recommended] : table[80];
+    // What capacity alone would have said — shown so the difference is visible.
+    const byGallons = TANK_SIZES.find((t) => t >= peak * 1.25) ?? 80;
+    return { peak, recommended, fhr, byGallons, s, d, l, b };
+  }, [showers, dishwasher, laundry, baths, fuel]);
 
   const tankless = useMemo(() => {
     const s = parseInt(tShowers || "0", 10) || 0;
@@ -175,23 +220,30 @@ export default function WaterHeater() {
     const f = parseInt(tFaucets || "0", 10) || 0;
     // Hot-water flow per simultaneous fixture, in GPM.
     const gpm = s * 2.0 + d * 1.5 + l * 2.0 + f * 1.0;
-    return { gpm, s, d, l, f };
-  }, [tShowers, tDishwasher, tLaundry, tFaucets]);
+    const r = parseFloat(rise) || 0;
+    // Heat required: GPM × 60 min × 8.33 lb/gal × ΔT ≈ GPM × ΔT × 500 BTU/hr output.
+    const btuOut = gpm * r * 500;
+    const btuIn85 = btuOut / 0.85; // typical non-condensing gas
+    const btuIn95 = btuOut / 0.95; // condensing
+    const kw = btuOut / 3412; // electric tankless, ~99% efficient
+    return { gpm, s, d, l, f, rise: r, btuOut, btuIn85, btuIn95, kw };
+  }, [tShowers, tDishwasher, tLaundry, tFaucets, rise]);
 
   const buildPayload = (): ToolQuotePayload | null => {
     if (tab === "tank") {
+      if (!tank.recommended) return null;
       return {
         source: "Water heater sizing calculator",
         sourceHref: "/tools/plumbing/water-heater-sizing-calculator",
-        title: `Water heater replacement — ${tank.recommended} gal`,
+        title: `Water heater replacement — ${tank.recommended} gal ${fuel}`,
         notes:
-          `Busiest hour: ${tank.s} shower(s), ${tank.d} dishwasher load(s), ${tank.l} laundry load(s) ` +
-          `→ ${fmt(tank.peak)} gal peak demand. Sized to ${tank.recommended} gal with 25% buffer.\n` +
-          `Check the yellow label: first-hour rating should clear ${fmt(tank.peak)} gal.\n` +
+          `Busiest hour: ${tank.s} shower(s), ${tank.b} bath(s), ${tank.d} dishwasher load(s), ${tank.l} laundry load(s) ` +
+          `→ ${fmt(tank.peak)} gal peak-hour demand.\n` +
+          `${tank.recommended}-gal ${fuel}: typical first-hour rating ${tank.fhr} gal. Confirm the FHR on the unit's EnergyGuide label clears ${fmt(tank.peak)} gal.\n` +
           `Add your equipment price and labor below.`,
         lines: [
           {
-            description: `${tank.recommended}-gal water heater — per sizing calc`,
+            description: `${tank.recommended}-gal ${fuel} water heater — FHR ≥ ${fmt(tank.peak)} gal per sizing calc`,
             qty: 1,
             unit_price: 0,
             kind: "materials",
@@ -207,11 +259,11 @@ export default function WaterHeater() {
       notes:
         `Simultaneous demand: ${tankless.s} shower(s), ${tankless.d} dishwasher, ${tankless.l} washer, ` +
         `${tankless.f} faucet(s) → ${fmt(tankless.gpm, 1)} GPM at ${rise}°F rise.\n` +
-        `Shop for a unit rated ≥ ${fmt(tankless.gpm, 1)} GPM at that rise.\n` +
+        `Shop for a unit rated ≥ ${fmt(tankless.gpm, 1)} GPM at that rise — about ${fmt(tankless.btuIn85, 0)} BTU/hr input for a non-condensing gas unit (${fmt(tankless.kw, 1)} kW electric).\n` +
         `Add your equipment price and labor below.`,
       lines: [
         {
-          description: `Tankless water heater — ≥ ${fmt(tankless.gpm, 1)} GPM at ${rise}°F rise`,
+          description: `Tankless water heater — ≥ ${fmt(tankless.gpm, 1)} GPM at ${rise}°F rise (~${fmt(tankless.btuIn85, 0)} BTU/hr gas)`,
           qty: 1,
           unit_price: 0,
           kind: "materials",
@@ -223,8 +275,10 @@ export default function WaterHeater() {
 
   const resultText =
     tab === "tank"
-      ? `Water heater: ${fmt(tank.peak)} gal peak-hour demand → ${tank.recommended}-gal tank (first-hour rating should clear ${fmt(tank.peak)} gal).`
-      : `Tankless: needs ${fmt(tankless.gpm, 1)} GPM at a ${rise}°F rise.`;
+      ? tank.recommended
+        ? `Water heater: ${fmt(tank.peak)} gal peak-hour demand → ${tank.recommended}-gal ${fuel} (typical FHR ${tank.fhr} gal; confirm on the EnergyGuide label).`
+        : `Water heater: ${fmt(tank.peak)} gal peak-hour demand exceeds any single ${fuel} tank's first-hour rating — consider two units or tankless.`
+      : `Tankless: needs ${fmt(tankless.gpm, 1)} GPM at a ${rise}°F rise ≈ ${fmt(tankless.btuIn85, 0)} BTU/hr gas input (${fmt(tankless.kw, 1)} kW electric).`;
 
   return (
     <div>
@@ -243,9 +297,25 @@ export default function WaterHeater() {
           <p className="text-sm leading-relaxed text-bone-400">
             Count what runs in the busiest hour of the day — usually the morning rush.
           </p>
-          <div className="mt-4 grid gap-5 lg:grid-cols-3">
+          <div className="mt-4">
+            <Field label="Fuel" hint="Gas recovers about twice as fast, so the same tank delivers more hot water in an hour.">
+              <Seg<Fuel>
+                ariaLabel="Fuel type"
+                value={fuel}
+                onChange={setFuel}
+                options={[
+                  { value: "gas", label: "Gas / propane" },
+                  { value: "electric", label: "Electric" },
+                ]}
+              />
+            </Field>
+          </div>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
             <Field label="Back-to-back showers" hint="~10 gal of hot water each.">
               <SliderInput value={showers} onChange={setShowers} min={0} max={8} step={1} ariaLabel="Number of showers" />
+            </Field>
+            <Field label="Tub baths" hint="~15 gal each.">
+              <SliderInput value={baths} onChange={setBaths} min={0} max={4} step={1} ariaLabel="Tub baths" />
             </Field>
             <Field label="Dishwasher loads" hint="~6 gal each.">
               <SliderInput value={dishwasher} onChange={setDishwasher} min={0} max={4} step={1} ariaLabel="Dishwasher loads" />
@@ -254,7 +324,15 @@ export default function WaterHeater() {
               <SliderInput value={laundry} onChange={setLaundry} min={0} max={4} step={1} ariaLabel="Laundry loads" />
             </Field>
           </div>
-          <TankScene gallons={tank.recommended} peak={tank.peak} />
+          {tank.recommended ? (
+            <TankScene gallons={tank.recommended} peak={tank.peak} fhr={tank.fhr} fuel={fuel} />
+          ) : (
+            <p className="mt-6 rounded-xl border border-ember-600/50 bg-ember-600/10 p-4 text-sm leading-relaxed text-bone-200">
+              {fmt(tank.peak)} gal in one hour is more than any single {fuel} tank up to 80 gal can deliver (first-hour
+              rating tops out around {FHR[fuel][80]} gal). Look at two tanks in series, a commercial unit, or a tankless
+              system sized on the other tab.
+            </p>
+          )}
           {/* demand meter */}
           <div className="mt-6">
             <div className="flex items-end justify-between text-xs font-bold uppercase tracking-[0.12em] text-bone-500">
@@ -276,20 +354,30 @@ export default function WaterHeater() {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Stat
-              label="Peak-hour demand"
+              label="First-hour rating to beat"
               value={`${fmt(tank.peak)} gal`}
-              sub="Hot water used in the busiest hour"
+              sub="Peak-hour demand — the FHR on the yellow EnergyGuide label must clear this"
               highlight
             />
             <Stat
-              label="Recommended tank"
-              value={`${tank.recommended} gal`}
-              sub="Smallest standard size with a 25% buffer"
+              label={`Recommended ${fuel} tank`}
+              value={tank.recommended ? `${tank.recommended} gal` : "Over 80 gal"}
+              sub={
+                tank.recommended
+                  ? `Typical FHR ${tank.fhr} gal — smallest size that clears the demand`
+                  : "No single residential tank clears this hour"
+              }
             />
             <Stat
-              label="First-hour rating to beat"
-              value={`${fmt(tank.peak)} gal`}
-              sub="Check the yellow EnergyGuide label — FHR should clear this"
+              label="If you sized by gallons"
+              value={`${tank.byGallons} gal`}
+              sub={
+                tank.recommended && tank.byGallons > tank.recommended
+                  ? `Capacity-plus-25% oversizes by a step — ${fuel} recovery makes up the difference`
+                  : tank.recommended && tank.byGallons < tank.recommended
+                    ? `Capacity-plus-25% undersizes — ${fuel} recovery is slower than the rule assumes`
+                    : "Same answer either way here"
+              }
             />
           </div>
           <QuoteBridge buildPayload={buildPayload} resultText={resultText} />
@@ -331,6 +419,19 @@ export default function WaterHeater() {
               label="What to shop for"
               value={`${fmt(tankless.gpm, 1)}+ GPM`}
               sub={`Rated at a ${rise}°F rise — check the spec sheet, not the headline number`}
+            />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <Stat
+              label="Gas input needed"
+              value={`${fmt(tankless.btuIn85 / 1000, 0)}k BTU/hr`}
+              sub={`${fmt(tankless.btuOut / 1000, 0)}k output ÷ 85% (non-condensing). Condensing: ${fmt(tankless.btuIn95 / 1000, 0)}k`}
+            />
+            <Stat label="Electric equivalent" value={`${fmt(tankless.kw, 1)} kW`} sub="Whole-house electric units run 18–36 kW and need 2–4 dedicated 40–60 A circuits" />
+            <Stat
+              label="Gas line check"
+              value={tankless.btuIn85 > 150000 ? "3/4\"+ line" : "Verify"}
+              sub="A 199k BTU unit usually needs a 3/4-inch gas line and dedicated venting — confirm with the manufacturer's tables"
             />
           </div>
           <QuoteBridge buildPayload={buildPayload} resultText={resultText} />

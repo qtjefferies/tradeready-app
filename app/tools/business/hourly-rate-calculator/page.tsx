@@ -17,8 +17,9 @@ export default function Page() {
       lede="The rate that covers your pay, your overhead, and your profit — computed from your real billable hours, not the 40-hour fantasy. If the number surprises you, that's the point."
       mathTitle="How the math works"
       mathSteps={[
-        "Add your target take-home pay to your yearly business overhead — insurance, truck, fuel, tools, phone, software, everything it costs for the business to exist.",
-        "Add your profit margin on top. 10% is a healthy floor; it's what funds new equipment and slow months.",
+        "Start with your target pay, then add the taxes and benefits that ride on it: self-employment tax is 15.3% of net on its own, before health insurance or retirement. This is the cost most one-truck shops forget, and it is why a $75,000 salary costs the business closer to $86,000.",
+        "Add your yearly business overhead — insurance, truck, fuel, tools, phone, software, everything it costs for the business to exist.",
+        "Apply the profit margin as a share of revenue, not a markup on cost: revenue = costs ÷ (1 − margin). A 10% margin is an 11.1% markup. Charging 10% on top of costs and calling it a 10% margin quietly leaves you a point short.",
         "Divide by your real annual billable hours: billable hours per week × working weeks per year. Wrench time only — not driving, quoting, or paperwork.",
         "The result is the minimum sustainable hourly rate. Day rate is just 8× the hourly rate.",
       ]}

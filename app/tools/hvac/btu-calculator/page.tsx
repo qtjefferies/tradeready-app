@@ -13,17 +13,18 @@ export default function Page() {
     <ToolLayout
       trade="HVAC"
       tradeHref="/tools"
-      title="BTU calculator — what size AC do I need?"
-      lede="The most-asked question in HVAC, answered in ten seconds. Enter the space and get the cooling load in BTU/hr and tons — plus the size to actually shop for."
+      title="BTU calculator — what size AC or furnace?"
+      lede="The most-asked question in HVAC, answered in ten seconds. Enter the space and get the cooling load in tons or the furnace input in BTU/hr — plus the size to actually shop for, and an honest note on where a rule of thumb ends and Manual J begins."
       mathTitle="How the math works"
       mathSteps={[
         "Start with 20 BTU per square foot — the industry's baseline rule of thumb for a moderately insulated space.",
         "Adjust for climate: ×1.25 in hot regions, ×0.85 where summers are mild. Adjust for ceiling height: a 10-foot ceiling holds 25% more air than an 8-foot one.",
         "Adjust for the building: ×0.9 for good insulation, ×1.15 for poor; ×1.1 for full sun, ×0.95 for full shade.",
         "Add 600 BTU/hr for each occupant beyond two, and 4,000 BTU/hr if the zone includes a kitchen.",
-        "Divide by 12,000 to get tons, then round UP to the nearest half-ton. An undersized unit runs forever and never catches up; slightly oversized short-cycles, so nearest half-ton up is the sweet spot.",
+        "Divide by 12,000 to get tons and round to the nearest half-ton up. Then sanity-check the other way: if that jump is more than about 15% over the load, the smaller size with a variable-speed unit is often the better call, because an oversized AC short-cycles and never pulls the humidity out.",
+        "Heating mode uses the same envelope adjustments on a climate baseline of 30–55 BTU/hr per square foot for heat loss, then divides by the furnace's AFUE for the input rating on the nameplate — an 80% furnace needs a bigger input than a 95% one to deliver the same heat.",
       ]}
-      mathNote="This is a rule-of-thumb estimate for quoting and sanity-checking. Final equipment selection should follow a Manual J load calculation — this gets you in the right half-ton, Manual J picks the exact unit."
+      mathNote="This is a rule-of-thumb estimate for quoting and sanity-checking; it does not see window area, orientation, duct leakage, or infiltration. Final equipment selection should follow an ACCA Manual J load calculation — most jurisdictions require one for the permit. This gets you in the right half-ton; Manual J picks the exact unit."
       faqs={[
         {
           q: "How many BTU per square foot do I need?",

@@ -17,10 +17,11 @@ export default function Page() {
       lede="Size it from the busiest hour, not the number of bedrooms. Count what runs at once — showers, dishwasher, laundry — and get the tank gallons or tankless GPM the house actually needs."
       mathTitle="How the math works"
       mathSteps={[
-        "Tank sizing starts with peak-hour demand: every back-to-back shower draws about 10 gallons of hot water, a dishwasher load about 6, a warm laundry load about 7.",
-        "Add up everything that runs in the busiest hour — usually the morning rush — and add a 25% buffer so the last shower isn't lukewarm.",
-        "Round up to the nearest standard tank size (30, 40, 50, 65, 75, 80 gallons). Then check the yellow EnergyGuide label: the first-hour rating should clear your peak-hour demand.",
+        "Tank sizing starts with peak-hour demand: every back-to-back shower draws about 10 gallons of hot water, a tub bath about 15, a dishwasher load about 6, a warm laundry load about 7 (DOE sizing worksheet, modern fixtures).",
+        "Add up everything that runs in the busiest hour — usually the morning rush. That number is the first-hour rating (FHR) the heater has to deliver: the tank's stored hot water plus what it can reheat in that hour.",
+        "Pick the smallest standard size (30, 40, 50, 65, 75, 80 gal) whose typical FHR for your fuel clears the demand. Gas recovers about twice as fast as electric, so a 50-gal gas heater (FHR ≈ 85) out-delivers a 65-gal electric (FHR ≈ 76). Then confirm the FHR on the yellow EnergyGuide label of the unit you actually buy.",
         "Tankless sizing is about flow, not storage: add up simultaneous fixtures — 2.0 GPM per shower, 1.5 per dishwasher, 2.0 per washing machine, 1.0 per faucet — and shop for a unit rated at or above that GPM at your climate's temperature rise.",
+        "The heat behind that flow is GPM × temperature rise × 500 BTU/hr. Divide by the unit's efficiency (about 85% non-condensing, 95% condensing) for the gas input to shop for, or by 3,412 for kilowatts on an electric unit — that's what decides the gas line size and the circuits.",
       ]}
       mathNote="Fixture draws are planning estimates, not lab measurements. Low-flow showerheads and efficient dishwashers draw less; long teenage showers draw more. When in doubt, size up one step — an oversized tank just cycles less."
       faqs={[

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useUrlState } from "../useUrlState";
 import { Field, Seg, SliderInput, Stat, StepSlider, fmt } from "../ui";
 import { DIM, IsoBox, IsoStage, SAFETY, boxCorners, fitIso, type V3 } from "../iso";
 import QuoteBridge from "../QuoteBridge";
@@ -9,26 +10,33 @@ import type { ToolQuotePayload } from "@/lib/toolQuote";
 type Phase = "single" | "three";
 type Material = "cu" | "al";
 
-/** Circular mils per NEC Chapter 9, Table 8. */
-const SIZES: { label: string; cm: number }[] = [
-  { label: "14 AWG", cm: 4110 },
-  { label: "12 AWG", cm: 6530 },
-  { label: "10 AWG", cm: 10380 },
-  { label: "8 AWG", cm: 16510 },
-  { label: "6 AWG", cm: 26240 },
-  { label: "4 AWG", cm: 41740 },
-  { label: "3 AWG", cm: 52620 },
-  { label: "2 AWG", cm: 66360 },
-  { label: "1 AWG", cm: 83690 },
-  { label: "1/0 AWG", cm: 105600 },
-  { label: "2/0 AWG", cm: 133100 },
-  { label: "3/0 AWG", cm: 167800 },
-  { label: "4/0 AWG", cm: 211600 },
-  { label: "250 kcmil", cm: 250000 },
-  { label: "300 kcmil", cm: 300000 },
-  { label: "350 kcmil", cm: 350000 },
-  { label: "400 kcmil", cm: 400000 },
-  { label: "500 kcmil", cm: 500000 },
+/**
+ * Circular mils per NEC Chapter 9, Table 8, and allowable ampacity per NEC
+ * Table 310.16, 75°C column (the terminal rating on most breakers and
+ * lugs), copper and aluminum. `null` means the size isn't listed for that
+ * material. The small-conductor limits of 240.4(D) (15/20/30 A for 14/12/10
+ * copper; 15/25 A for 12/10 aluminum) are applied on top, since that is the
+ * largest breaker you can put on the wire regardless of the table.
+ */
+const SIZES: { label: string; cm: number; ampCu: number; ampAl: number | null }[] = [
+  { label: "14 AWG", cm: 4110, ampCu: 15, ampAl: null },
+  { label: "12 AWG", cm: 6530, ampCu: 20, ampAl: 15 },
+  { label: "10 AWG", cm: 10380, ampCu: 30, ampAl: 25 },
+  { label: "8 AWG", cm: 16510, ampCu: 50, ampAl: 40 },
+  { label: "6 AWG", cm: 26240, ampCu: 65, ampAl: 50 },
+  { label: "4 AWG", cm: 41740, ampCu: 85, ampAl: 65 },
+  { label: "3 AWG", cm: 52620, ampCu: 100, ampAl: 75 },
+  { label: "2 AWG", cm: 66360, ampCu: 115, ampAl: 90 },
+  { label: "1 AWG", cm: 83690, ampCu: 130, ampAl: 100 },
+  { label: "1/0 AWG", cm: 105600, ampCu: 150, ampAl: 120 },
+  { label: "2/0 AWG", cm: 133100, ampCu: 175, ampAl: 135 },
+  { label: "3/0 AWG", cm: 167800, ampCu: 200, ampAl: 155 },
+  { label: "4/0 AWG", cm: 211600, ampCu: 230, ampAl: 180 },
+  { label: "250 kcmil", cm: 250000, ampCu: 255, ampAl: 205 },
+  { label: "300 kcmil", cm: 300000, ampCu: 285, ampAl: 230 },
+  { label: "350 kcmil", cm: 350000, ampCu: 310, ampAl: 250 },
+  { label: "400 kcmil", cm: 400000, ampCu: 335, ampAl: 270 },
+  { label: "500 kcmil", cm: 500000, ampCu: 380, ampAl: 310 },
 ];
 
 /** Ohms per circular-mil-foot, NEC Chapter 9 Table 8 notes. */
@@ -128,12 +136,19 @@ function RunScene({
 }
 
 export default function VoltageDrop() {
-  const [voltage, setVoltage] = useState("240");
-  const [phase, setPhase] = useState<Phase>("single");
-  const [amps, setAmps] = useState("20");
-  const [distance, setDistance] = useState("100");
-  const [material, setMaterial] = useState<Material>("cu");
-  const [target, setTarget] = useState("3");
+  const [q, set] = useUrlState({ v: "240", ph: "single", a: "20", d: "100", m: "cu", t: "3" });
+  const voltage = q.v;
+  const phase = (q.ph === "three" ? "three" : "single") as Phase;
+  const amps = q.a;
+  const distance = q.d;
+  const material = (q.m === "al" ? "al" : "cu") as Material;
+  const target = q.t;
+  const setVoltage = set("v");
+  const setPhase = set("ph") as (v: Phase) => void;
+  const setAmps = set("a");
+  const setDistance = set("d");
+  const setMaterial = set("m") as (v: Material) => void;
+  const setTarget = set("t");
 
   const calc = useMemo(() => {
     const V = parseFloat(voltage);
@@ -145,14 +160,21 @@ export default function VoltageDrop() {
     const k = K[material];
     const rows = SIZES.map((s) => {
       const vd = (factor * k * I * L) / s.cm;
-      return { ...s, vd, pct: (vd / V) * 100 };
+      const amp = material === "cu" ? s.ampCu : s.ampAl;
+      return { ...s, vd, pct: (vd / V) * 100, amp, ampOk: amp !== null && amp >= I };
     });
-    let recIdx = rows.findIndex((r) => r.pct <= T);
-    const maxedOut = recIdx === -1;
-    if (maxedOut) recIdx = rows.length - 1;
+    // Two constraints, and the wire must satisfy both: it has to carry the
+    // load (ampacity) and it has to keep the drop under target.
+    const dropIdx = rows.findIndex((r) => r.pct <= T);
+    const ampIdx = rows.findIndex((r) => r.ampOk);
+    const maxedOut = dropIdx === -1;
+    const ampMaxed = ampIdx === -1;
+    const recIdx = Math.max(maxedOut ? rows.length - 1 : dropIdx, ampMaxed ? rows.length - 1 : ampIdx);
     const rec = rows[recIdx];
+    const governed: "ampacity" | "drop" | "both" =
+      !maxedOut && !ampMaxed && ampIdx === dropIdx ? "both" : ampIdx > dropIdx ? "ampacity" : "drop";
     const smaller = recIdx > 0 ? rows[recIdx - 1] : null;
-    return { V, I, L, T, rows, recIdx, rec, smaller, maxedOut, loadV: V - rec.vd };
+    return { V, I, L, T, rows, recIdx, rec, smaller, maxedOut, ampMaxed, governed, dropIdx, ampIdx, loadV: V - rec.vd };
   }, [voltage, phase, amps, distance, material, target]);
 
   const materialName = material === "cu" ? "copper" : "aluminum";
@@ -166,8 +188,9 @@ export default function VoltageDrop() {
       title: `Wire run — ${fmt(L, 0)} ft, ${fmt(I, 0)}A at ${fmt(V, 0)}V`,
       notes:
         `${phase === "three" ? "Three-phase" : "Single-phase"} ${fmt(V, 0)}V, ${fmt(I, 0)}A over ${fmt(L, 0)} ft one-way.\n` +
-        `Use ${rec.label} ${materialName} — drop ${fmt(rec.vd, 1)}V (${fmt(rec.pct, 1)}%), ${fmt(calc.loadV, 1)}V at the load.\n` +
-        `Verify ampacity per NEC 310 and local code before buying wire.`,
+        `Use ${rec.label} ${materialName} — drop ${fmt(rec.vd, 1)}V (${fmt(rec.pct, 1)}%), ${fmt(calc.loadV, 1)}V at the load; ` +
+        `rated ${rec.amp ?? "—"}A at 75°C (NEC 310.16). Sized by ${calc.governed === "ampacity" ? "ampacity" : calc.governed === "drop" ? "voltage drop" : "ampacity and voltage drop"}.\n` +
+        `Apply derating for ambient temperature and conduit fill per NEC 310.15, and confirm with local code.`,
       lines: [
         {
           description: `${rec.label} ${materialName} wire — ${fmt(L, 0)} ft run (voltage drop calc)`,
@@ -180,10 +203,12 @@ export default function VoltageDrop() {
   };
 
   const resultText = calc
-    ? `Voltage drop: ${fmt(calc.L, 0)} ft, ${fmt(calc.I, 0)}A at ${fmt(calc.V, 0)}V ${phase === "three" ? "three-phase" : "single-phase"} → use ${calc.rec.label} ${materialName}, drop ${fmt(calc.rec.vd, 1)}V (${fmt(calc.rec.pct, 1)}%).`
+    ? `Wire size: ${fmt(calc.L, 0)} ft, ${fmt(calc.I, 0)}A at ${fmt(calc.V, 0)}V ${phase === "three" ? "three-phase" : "single-phase"} → use ${calc.rec.label} ${materialName} (${calc.rec.amp ?? "—"}A at 75°C), drop ${fmt(calc.rec.vd, 1)}V (${fmt(calc.rec.pct, 1)}%).`
     : "";
 
-  const tableRows = calc ? calc.rows.slice(Math.max(0, calc.recIdx - 1), calc.recIdx + 4) : [];
+  const tableRows = calc
+    ? calc.rows.slice(Math.max(0, Math.min(calc.recIdx, calc.dropIdx === -1 ? calc.recIdx : calc.dropIdx, calc.ampIdx === -1 ? calc.recIdx : calc.ampIdx) - 1), calc.recIdx + 3)
+    : [];
 
   return (
     <div>
@@ -256,12 +281,29 @@ export default function VoltageDrop() {
               it.
             </p>
           ) : null}
+          {calc.ampMaxed ? (
+            <p className="mt-4 rounded-xl border border-ember-600/50 bg-ember-600/10 p-4 text-sm leading-relaxed text-bone-200">
+              No single {materialName} conductor up to 500 kcmil is rated for {fmt(calc.I, 0)}A at 75°C. This is a
+              parallel-conductor job — NEC 310.10(G) — and needs an engineered design.
+            </p>
+          ) : null}
+          {calc.governed === "ampacity" && !calc.ampMaxed ? (
+            <p className="mt-4 rounded-xl border border-safety-500/40 bg-safety-500/10 p-4 text-sm leading-relaxed text-bone-200">
+              <span className="font-bold text-safety-300">Ampacity governs here, not voltage drop.</span>{" "}
+              {calc.rows[calc.dropIdx === -1 ? calc.recIdx : calc.dropIdx].label} would hold the drop under{" "}
+              {fmt(calc.T, 1)}%, but it is only rated{" "}
+              {calc.rows[calc.dropIdx === -1 ? calc.recIdx : calc.dropIdx].amp ?? "—"}A at 75°C — too small to
+              legally carry {fmt(calc.I, 0)}A. {calc.rec.label} is the smallest {materialName} that does both.
+            </p>
+          ) : null}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Stat
               label="Use this wire"
               value={calc.rec.label}
-              sub={`${materialName} · smallest size under ${fmt(calc.T, 1)}% drop`}
+              sub={`${materialName} · ${calc.rec.amp ?? "—"}A at 75°C · sized by ${
+                calc.governed === "ampacity" ? "ampacity" : calc.governed === "drop" ? "voltage drop" : "both limits"
+              }`}
               highlight
             />
             <Stat
@@ -274,9 +316,11 @@ export default function VoltageDrop() {
               value={calc.smaller ? `${fmt(calc.smaller.pct, 1)}%` : "—"}
               sub={
                 calc.smaller
-                  ? calc.smaller.pct <= calc.T
-                    ? "Also under target — your call on cost vs. headroom"
-                    : "Over target — this is why you upsize"
+                  ? !calc.smaller.ampOk
+                    ? `Only ${calc.smaller.amp ?? "not"} rated${calc.smaller.amp ? "A" : ""} at 75°C — can't carry the load`
+                    : calc.smaller.pct <= calc.T
+                      ? "Also under target — your call on cost vs. headroom"
+                      : "Over target — this is why you upsize"
                   : "Already at the smallest listed size"
               }
             />
@@ -287,6 +331,7 @@ export default function VoltageDrop() {
               <thead>
                 <tr className="bg-ink-900 text-left text-[11px] uppercase tracking-[0.12em] text-bone-500">
                   <th className="px-4 py-3 font-bold">Wire size</th>
+                  <th className="px-4 py-3 font-bold">75°C rating</th>
                   <th className="px-4 py-3 font-bold">Drop</th>
                   <th className="px-4 py-3 font-bold">% of {fmt(calc.V, 0)}V</th>
                   <th className="px-4 py-3 text-right font-bold">Verdict</th>
@@ -295,7 +340,8 @@ export default function VoltageDrop() {
               <tbody>
                 {tableRows.map((r) => {
                   const isRec = r.label === calc.rec.label;
-                  const ok = r.pct <= calc.T;
+                  const dropOk = r.pct <= calc.T;
+                  const ok = dropOk && r.ampOk;
                   return (
                     <tr
                       key={r.label}
@@ -305,10 +351,13 @@ export default function VoltageDrop() {
                         {r.label}
                         {isRec ? <span className="ml-2 text-xs font-bold text-safety-300">← use this</span> : null}
                       </td>
+                      <td className={`px-4 py-2.5 ${r.ampOk ? "text-bone-300" : "text-ember-400"}`}>
+                        {r.amp === null ? "—" : `${r.amp}A`}
+                      </td>
                       <td className="px-4 py-2.5 text-bone-300">{fmt(r.vd, 1)}V</td>
-                      <td className="px-4 py-2.5 text-bone-300">{fmt(r.pct, 1)}%</td>
+                      <td className={`px-4 py-2.5 ${dropOk ? "text-bone-300" : "text-ember-400"}`}>{fmt(r.pct, 1)}%</td>
                       <td className={`px-4 py-2.5 text-right font-bold ${ok ? "text-emerald-400" : "text-ember-400"}`}>
-                        {ok ? "✓" : "✗"}
+                        {ok ? "✓" : !r.ampOk ? "✗ amps" : "✗ drop"}
                       </td>
                     </tr>
                   );

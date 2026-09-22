@@ -209,3 +209,48 @@ select option {
     @apply ring-2 ring-safety-300 ring-offset-2 ring-offset-ink-950;
   }
 }
+
+/* ---------- Print: the calculator and its working, nothing else ---------- */
+@media print {
+  header,
+  footer,
+  input[type="range"],
+  .range-dark {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  main {
+    padding-top: 0 !important;
+  }
+  .card {
+    background: #fff !important;
+    box-shadow: none !important;
+    border-color: #ddd !important;
+  }
+  .text-paper,
+  .text-bone-200,
+  .text-bone-300 {
+    color: #111 !important;
+  }
+  .text-bone-400,
+  .text-bone-500 {
+    color: #444 !important;
+  }
+  .text-safety-300,
+  .text-safety-400 {
+    color: #9a5b00 !important;
+  }
+  .bg-ink-900,
+  .bg-ink-900\/60,
+  .bg-safety-500\/10 {
+    background: #f6f6f6 !important;
+  }
+  .input-dark {
+    background: #fff !important;
+    color: #111 !important;
+    border-color: #bbb !important;
+  }
+}

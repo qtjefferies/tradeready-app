@@ -20,9 +20,10 @@ export default function Page() {
         "Voltage drop = 2 × K × I × L ÷ CM for single-phase (√3 instead of 2 for three-phase). K is the conductor's resistance: 12.9 for copper, 21.2 for aluminum, in ohms per circular-mil-foot.",
         "I is the load current in amps and L is the one-way distance in feet — the current travels out and back, hence the ×2. CM is the wire's cross-section in circular mils.",
         "Divide the drop by the system voltage for the percentage, and compare it against the NEC 210.19(A) guideline: 3% max on branch circuits, 5% for feeder plus branch combined.",
-        "The calculator walks up the standard AWG/kcmil sizes and returns the smallest one that stays at or under your target — that's the wire to buy.",
+        "The calculator walks up the standard AWG/kcmil sizes and finds the smallest one that stays at or under your drop target.",
+        "Then it checks ampacity: the wire also has to be rated for the load current per NEC Table 310.16 (75°C column) with the 240.4(D) small-conductor limits. The recommendation is the larger of the two sizes, and the result says which limit governed — on short runs at high current it's usually ampacity, not drop.",
       ]}
-      mathNote="Conductor properties follow NEC Chapter 9, Table 8. This sizes for voltage drop only — always verify the wire's ampacity per NEC 310 and your local code before installing."
+      mathNote="Conductor properties follow NEC Chapter 9, Table 8; ampacities follow Table 310.16 at 75°C. Derate for ambient temperature above 30°C and for more than three current-carrying conductors in a raceway (NEC 310.15), and confirm with local code before installing."
       faqs={[
         {
           q: "What is the 3% voltage drop rule?",
@@ -35,6 +36,10 @@ export default function Page() {
         {
           q: "Does aluminum wire need to be bigger than copper?",
           a: "Yes — aluminum's resistance (K = 21.2) is about 64% higher than copper's (K = 12.9), so it typically takes two wire sizes larger to hold the same voltage drop. The calculator handles both; just switch the material.",
+        },
+        {
+          q: "Does this check the wire's ampacity too?",
+          a: "Yes. A wire that holds the voltage drop can still be too small to carry the current legally — 4 AWG copper keeps a 100 A load under 3% at 100 feet, but it's only rated 85 A at 75°C. The calculator sizes for both and tells you which one set the answer. It does not apply temperature or conduit-fill derating; do that per NEC 310.15 if it applies.",
         },
         {
           q: "When do I need to upsize wire for voltage drop?",
