@@ -94,19 +94,43 @@ function isLocalHost(): boolean {
 /** Lazily-built singleton pool — Next.js reloads this module often in dev. */
 const globalForPg = globalThis as typeof globalThis & { __tradeReadyPool?: Pool };
 
+/**
+ * node-postgres parses `sslmode` out of the connection string, and that
+ * parsed value competes with the explicit `ssl` option below — which is how
+ * a pool configured to skip verification still fails with "self-signed
+ * certificate in certificate chain". Removing the parameter leaves exactly
+ * one source of truth for TLS: the option.
+ */
+function connectionStringWithoutSslMode(): string | undefined {
+  const raw = databaseUrl();
+  if (!raw) return undefined;
+  try {
+    const parsed = new URL(raw);
+    parsed.searchParams.delete("sslmode");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function pgPool(): Pool {
   if (!globalForPg.__tradeReadyPool) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Pool: PgPool } = require("pg") as typeof import("pg");
     const local = isLocalHost();
     globalForPg.__tradeReadyPool = new PgPool({
-      connectionString: databaseUrl(),
+      connectionString: connectionStringWithoutSslMode(),
       /**
-       * Managed providers terminate TLS with certificates that aren't always
-       * chainable from Node's default trust store, and a failure there reads
-       * as a generic connection error. The connection is still encrypted;
-       * it just isn't certificate-verified. If your provider's chain does
-       * validate, tighten this to `ssl: true`.
+       * Supabase (and several other managed providers) terminate TLS with a
+       * chain that doesn't validate against Node's default trust store, so
+       * strict verification fails outright.
+       *
+       * TRADE-OFF, stated plainly: the connection is still encrypted, but the
+       * server's identity is not verified, so this does not defend against an
+       * attacker who can already intercept traffic between the function and
+       * the database. Both sit inside provider networks, which is why this is
+       * the common setting. To close it properly, download your provider's CA
+       * certificate and pass `ssl: { ca }` instead.
        */
       ssl: local ? undefined : { rejectUnauthorized: false },
       /**
