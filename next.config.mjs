@@ -47,10 +47,22 @@ const nextConfig = {
   // level in 15, and setting it there on 14 is silently ignored — the build
   // succeeds and the files simply aren't in the bundle.
   experimental: {
+    /**
+     * Leave pdfkit as a real require from node_modules instead of bundling
+     * it. pdfkit resolves its built-in fonts through Node subpath imports
+     * ("#standard-fonts/Helvetica"), which webpack cannot resolve when it
+     * inlines the package — the build succeeds and every PDF then dies at
+     * runtime with "Cannot find module '#standard-fonts/Helvetica'".
+     * Unbundled, Node's own resolver handles it.
+     */
+    serverComponentsExternalPackages: ["pdfkit"],
     outputFileTracingIncludes: {
       "/api/admin/migrate": ["./lib/schema.sql"],
-      "/api/quotes/[id]/pdf": ["./node_modules/pdfkit/js/data/**"],
-      "/api/invoices/[id]/pdf": ["./node_modules/pdfkit/js/data/**"],
+      // Both the .afm metrics and the standard-font modules that pdfkit
+      // reaches through its "#standard-fonts/*" subpath import. Neither is a
+      // static require, so tracing finds neither on its own.
+      "/api/quotes/[id]/pdf": ["./node_modules/pdfkit/js/**"],
+      "/api/invoices/[id]/pdf": ["./node_modules/pdfkit/js/**"],
     },
   },
   async headers() {
