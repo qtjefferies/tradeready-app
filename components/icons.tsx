@@ -224,3 +224,44 @@ export function IconSettings(p: IconProps) {
     </Base>
   );
 }
+
+/* ---------- Trade marks for the free-tool catalog ---------- */
+
+export function IconBolt(p: IconProps) {
+  // Electrical
+  return (
+    <Base {...p}>
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
+    </Base>
+  );
+}
+
+export function IconThermo(p: IconProps) {
+  // HVAC — thermometer
+  return (
+    <Base {...p}>
+      <path d="M14 14.76V4a2 2 0 0 0-4 0v10.76a4 4 0 1 0 4 0z" />
+      <path d="M12 9v6" />
+    </Base>
+  );
+}
+
+export function IconDroplet(p: IconProps) {
+  // Plumbing
+  return (
+    <Base {...p}>
+      <path d="M12 2.7 6.3 9.6A7 7 0 1 0 17.7 9.6z" />
+    </Base>
+  );
+}
+
+export function IconSlab(p: IconProps) {
+  // General / concrete — a poured slab in perspective
+  return (
+    <Base {...p}>
+      <path d="m3 10 9-5 9 5-9 5-9-5z" />
+      <path d="M3 10v4l9 5 9-5v-4" />
+      <path d="M12 15v4" />
+    </Base>
+  );
+}

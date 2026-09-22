@@ -1,75 +1,57 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IconCheck, IconQuote, IconWrench } from "@/components/icons";
+import { ToolCard } from "@/components/tools/ToolCard";
+import { siteName, siteUrl } from "@/lib/site";
+import { TOOLS, TRADE_LABEL } from "@/lib/tools";
 
 export const metadata: Metadata = {
   title: "Free Calculators for the Trades",
   description:
     "Free trade calculators: voltage drop, BTU/AC sizing, water heater sizing, concrete, and contractor hourly rate. No signup, no paywall — from TradeReady.",
+  alternates: { canonical: "/tools" },
 };
 
-type Tool = { href: string; name: string; blurb: string; tag: string };
-
-const GROUPS: { trade: string; tools: Tool[] }[] = [
+const STEPS = [
   {
-    trade: "Electrical",
-    tools: [
-      {
-        href: "/tools/electrical/voltage-drop-calculator",
-        name: "Voltage drop calculator",
-        blurb: "The smallest wire size that keeps the drop under 3% — copper or aluminum, any run length.",
-        tag: "Most used",
-      },
-    ],
+    n: "01",
+    title: "Enter the numbers",
+    body: "Load, distance, square footage, hours — whatever the job gives you. Big inputs, glove-friendly, on your phone.",
+    Icon: IconWrench,
   },
   {
-    trade: "HVAC",
-    tools: [
-      {
-        href: "/tools/hvac/btu-calculator",
-        name: "BTU calculator",
-        blurb: "What size AC do you need? Cooling load in BTU/hr and tons from square footage, climate, and insulation.",
-        tag: "Homeowner favorite",
-      },
-    ],
+    n: "02",
+    title: "See the working",
+    body: "Every result comes with the formula and the standard it follows, so you can check it — or explain it to the customer.",
+    Icon: IconCheck,
   },
   {
-    trade: "Plumbing",
-    tools: [
-      {
-        href: "/tools/plumbing/water-heater-sizing-calculator",
-        name: "Water heater sizing calculator",
-        blurb: "Tank gallons or tankless GPM, sized from the household's busiest hour — not guesswork.",
-        tag: "Pro pick",
-      },
-    ],
-  },
-  {
-    trade: "General",
-    tools: [
-      {
-        href: "/tools/general/concrete-calculator",
-        name: "Concrete calculator",
-        blurb: "Cubic yards to order or bags to buy for any slab, patio, or driveway — waste included.",
-        tag: "DIY favorite",
-      },
-    ],
-  },
-  {
-    trade: "Business",
-    tools: [
-      {
-        href: "/tools/business/hourly-rate-calculator",
-        name: "Hourly rate calculator",
-        blurb: "The rate that covers your pay, overhead, and profit — from your real billable hours.",
-        tag: "Shop essential",
-      },
-    ],
+    n: "03",
+    title: "Turn it into a quote",
+    body: "One tap drops the numbers into a TradeReady quote draft. Calculate now, sign in whenever — the result waits for you.",
+    Icon: IconQuote,
   },
 ];
 
 export default function ToolsPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Free calculators for the trades",
+    numberOfItems: TOOLS.length,
+    itemListElement: TOOLS.map((t, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: t.name,
+      url: `${siteUrl}${t.href}`,
+    })),
+    provider: { "@type": "Organization", name: siteName, url: siteUrl },
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+
       <nav aria-label="Breadcrumb" className="text-xs font-semibold text-bone-500">
         <ol className="flex items-center gap-2">
           <li>
@@ -95,42 +77,61 @@ export default function ToolsPage() {
           its working, so you can trust the number — and every one is free, no
           account needed.
         </p>
+        <ul className="mt-6 flex flex-wrap justify-center gap-2" aria-label="Trades covered">
+          {TOOLS.map((t) => (
+            <li key={t.href}>
+              <a
+                href={`#${t.trade}`}
+                className="inline-flex min-h-[40px] items-center rounded-full border-2 border-ink-600 bg-ink-800 px-4 text-sm font-bold text-bone-200 transition hover:border-safety-500/50 hover:text-safety-300"
+              >
+                {TRADE_LABEL[t.trade]}
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <div className="mt-12 space-y-10">
-        {GROUPS.map((g) => (
-          <section key={g.trade} aria-label={`${g.trade} tools`}>
-            <div className="flex items-center gap-3">
-              <h2 className="font-display text-2xl uppercase tracking-wide text-paper">{g.trade}</h2>
-              <div className="h-px flex-1 bg-ink-700" aria-hidden="true" />
+      <section className="mt-12" aria-label="All free calculators">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="font-display text-2xl uppercase tracking-wide text-paper">
+            {TOOLS.length} calculators, {TOOLS.length} trades
+          </h2>
+          <p className="shrink-0 text-sm text-bone-500">More on the way</p>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TOOLS.map((t) => (
+            <div key={t.href} id={t.trade} className="scroll-mt-24">
+              <ToolCard tool={t} />
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {g.tools.map((t) => (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  className="card group relative overflow-hidden p-6 transition hover:border-safety-500/40"
-                >
-                  <div
-                    className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-safety-400 to-ember-600"
-                    aria-hidden="true"
-                  />
-                  <span className="inline-block rounded-full border border-safety-500/40 bg-safety-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-safety-300">
-                    {t.tag}
-                  </span>
-                  <h3 className="mt-3 font-display text-xl uppercase tracking-wide text-paper transition group-hover:text-safety-300">
-                    {t.name}
-                  </h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-bone-300">{t.blurb}</p>
-                  <p className="mt-4 text-sm font-bold text-safety-300">Open calculator →</p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
-      <section className="card mt-14 p-6 sm:p-10" aria-label="Why these are free">
+      <section className="mt-14" aria-label="How every tool works">
+        <div className="text-center">
+          <span className="kicker">How every tool works</span>
+          <h2 className="mt-4 font-display text-3xl uppercase tracking-wide text-paper md:text-4xl">
+            From the number to the job
+          </h2>
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {STEPS.map((s) => (
+            <div key={s.n} className="card relative overflow-hidden p-6">
+              <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-safety-400 to-ember-600" aria-hidden="true" />
+              <div className="flex items-start justify-between gap-4">
+                <p className="font-display text-4xl leading-none text-safety-400/90">{s.n}</p>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-ink-600 bg-ink-900 text-bone-300">
+                  <s.Icon className="h-5 w-5" />
+                </span>
+              </div>
+              <h3 className="mt-4 font-display text-xl uppercase tracking-wide text-paper">{s.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-bone-300">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card mt-14 overflow-hidden p-6 sm:p-10" aria-label="Why these are free">
         <div className="grid gap-8 md:grid-cols-2">
           <div>
             <h2 className="font-display text-3xl uppercase tracking-wide text-paper">Why free?</h2>
@@ -138,6 +139,10 @@ export default function ToolsPage() {
               Because the best advertising is being useful. These calculators are
               the same math our quote builder uses — we&apos;d rather you trust
               the numbers here first, then trust us with your business.
+            </p>
+            <p className="mt-3 text-[15px] leading-relaxed text-bone-300">
+              No email gate, no &ldquo;pro&rdquo; tier, no watermark on the result.
+              Use them as often as you like.
             </p>
           </div>
           <div>
@@ -153,6 +158,7 @@ export default function ToolsPage() {
             >
               Get started free
             </Link>
+            <p className="mt-3 text-xs text-bone-500">No credit card. Your data stays yours.</p>
           </div>
         </div>
       </section>

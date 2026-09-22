@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefingPreview } from "@/components/BriefingPreview";
+import { ToolCard } from "@/components/tools/ToolCard";
+import { TOOLS } from "@/lib/tools";
 import {
   IconCheck,
   IconClock,
@@ -334,39 +336,67 @@ export default function LandingPage() {
       </section>
 
       {/* FREE TOOLS */}
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+      <section id="tools" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6 md:py-20">
         <div className="text-center">
           <span className="kicker">Free forever · No signup</span>
           <h2 className="mx-auto mt-4 max-w-2xl font-display text-4xl uppercase tracking-wide text-paper md:text-5xl">
             Free calculators for the trades
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-bone-300">
-            The math you do on the job, done right and done fast. Conduit bends,
+            The math you do on the job, done right and done fast. Wire size,
             BTU sizing, water heaters, concrete, your hourly rate — every one
             free, every one showing its working.
           </p>
         </div>
+
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            { href: "/tools/electrical/voltage-drop-calculator", name: "Voltage drop", blurb: "Wire size for long runs — keep drop under 3%" },
-            { href: "/tools/hvac/btu-calculator", name: "BTU calculator", blurb: "What size AC do you need?" },
-            { href: "/tools/plumbing/water-heater-sizing-calculator", name: "Water heater sizing", blurb: "Tank gallons or tankless GPM" },
-            { href: "/tools/general/concrete-calculator", name: "Concrete calculator", blurb: "Yards to order or bags to buy" },
-            { href: "/tools/business/hourly-rate-calculator", name: "Hourly rate calculator", blurb: "The rate your business actually needs" },
-            { href: "/tools", name: "View all tools", blurb: "The full free collection →" },
-          ].map((t) => (
-            <Link
-              key={t.href}
-              href={t.href}
-              className="card group p-5 transition hover:border-safety-500/40"
-            >
-              <h3 className="font-display text-lg uppercase tracking-wide text-paper transition group-hover:text-safety-300">
-                {t.name}
-              </h3>
-              <p className="mt-1.5 text-sm text-bone-400">{t.blurb}</p>
-            </Link>
+          {TOOLS.map((t) => (
+            <ToolCard key={t.href} tool={t} compact />
           ))}
+
+          {/* The bridge: what happens after the number */}
+          <div className="card relative flex flex-col overflow-hidden p-5 sm:p-6">
+            <div className="hazard absolute inset-x-0 top-0 h-1.5" aria-hidden="true" />
+            <span className="mt-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-bone-500">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-money-400/15 text-money-300">
+                <IconQuote className="h-4 w-4" />
+              </span>
+              After the number
+            </span>
+            <h3 className="mt-4 font-display text-xl uppercase tracking-wide text-paper">
+              Turn any result into a quote
+            </h3>
+            <p className="mt-2 flex-1 text-sm leading-relaxed text-bone-400">
+              Every calculator ends with one tap that drops the numbers into a
+              quote draft. Calculate now, sign in whenever — the result waits
+              for you.
+            </p>
+            <Link
+              href="/tools"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-safety-300 transition hover:text-safety-200"
+            >
+              See all free tools →
+            </Link>
+          </div>
         </div>
+
+        <ul className="mt-8 grid gap-3 text-sm text-bone-300 sm:grid-cols-3">
+          {[
+            { t: "Shows its working", d: "Every step of the math, in plain words, under the result." },
+            { t: "No account, no paywall", d: "Use them on the job, on your phone, as often as you like." },
+            { t: "Built for the shop", d: "Copy the result to a text, or turn it straight into a quote." },
+          ].map((x) => (
+            <li key={x.t} className="flex items-start gap-3 rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-3">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-money-400/15 text-money-300">
+                <IconCheck className="h-3.5 w-3.5" />
+              </span>
+              <span>
+                <span className="block font-bold text-paper">{x.t}</span>
+                <span className="mt-0.5 block text-bone-400">{x.d}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* FAQ */}
