@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { findUserByEmail, getPasswordHash } from "@/lib/store";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 /**
  * POST /api/auth/login — log in with email + password.
@@ -34,6 +35,17 @@ export async function POST(req: NextRequest) {
       { error: "Invalid email or password." },
       { status: 401 }
     );
+  }
+
+  // Two buckets: the IP stops one machine spraying many accounts, the email
+  // stops a botnet grinding one account from many machines.
+  const ipLimit = await rateLimit(`login:ip:${clientIp(req)}`, 20, 900);
+  if (!ipLimit.allowed) {
+    return tooManyRequests(ipLimit, "Too many sign-in attempts. Wait a few minutes and try again.");
+  }
+  const emailLimit = await rateLimit(`login:email:${email}`, 10, 900);
+  if (!emailLimit.allowed) {
+    return tooManyRequests(emailLimit, "Too many sign-in attempts on this account. Wait a few minutes and try again.");
   }
 
   try {

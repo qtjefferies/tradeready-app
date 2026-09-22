@@ -158,3 +158,34 @@ select option {
     @apply sticky bottom-[84px] z-30 -mx-4 border-t-2 border-ink-700 bg-ink-900/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:static md:z-auto md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none;
   }
 }
+
+/* ---------- Briefing stagger (landing page mockup) ----------
+   The briefing card deals its rows in one at a time, the way the real screen
+   fills as each query lands. The animation only runs once <BriefingPreview>
+   marks the card as on-screen, so the rows are plainly visible by default —
+   with JavaScript off, or before the card is scrolled to, nothing is hidden. */
+@keyframes brief-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.brief-deal .brief-row {
+  animation: brief-in 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+.brief-deal .brief-row:nth-child(1) { animation-delay: 0.05s; }
+.brief-deal .brief-row:nth-child(2) { animation-delay: 0.35s; }
+.brief-deal .brief-row:nth-child(3) { animation-delay: 0.65s; }
+.brief-deal .brief-row:nth-child(4) { animation-delay: 0.95s; }
+
+/* Respect a reduced-motion preference: everything at once, no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .brief-deal .brief-row {
+    animation: none;
+  }
+}

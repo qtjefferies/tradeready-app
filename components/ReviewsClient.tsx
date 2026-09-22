@@ -6,6 +6,7 @@ import MessageModal from "./MessageModal";
 import type { Customer, Job, Review } from "@/lib/store";
 import { StatusBadge } from "./Badges";
 import { IconReviews } from "./icons";
+import { useConfirm } from "./ConfirmDialog";
 
 /**
  * ReviewsClient — review request tracking.
@@ -23,6 +24,7 @@ export default function ReviewsClient({
   completeJobs: Job[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [customerId, setCustomerId] = useState("");
   const [jobId, setJobId] = useState("");
   const [drafting, setDrafting] = useState(false);
@@ -110,7 +112,13 @@ export default function ReviewsClient({
   }
 
   async function remove(review: Review) {
-    if (!confirm("Delete this review request record?")) return;
+    const ok = await confirm({
+      title: "Delete this review request?",
+      body: "The record goes; the job and customer stay. You can log another ask any time.",
+      confirmLabel: "Delete record",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/reviews/${review.id}`, { method: "DELETE" });
       if (!res.ok) {

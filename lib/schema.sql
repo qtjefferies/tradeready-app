@@ -139,3 +139,108 @@ CREATE TABLE IF NOT EXISTS reviews (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS reviews_user_idx ON reviews (user_id, requested_at DESC);
+
+-- ===================================================================
+-- Phase 1 migration — customer-facing quote links + the money engine.
+--
+-- Safe to re-run: every statement is IF NOT EXISTS. Existing installs
+-- should paste this block into the Vercel Postgres query console; fresh
+-- installs get it as part of running this file top to bottom.
+-- ===================================================================
+
+-- Shareable quote links. `public_token` is a 256-bit random value, base64url
+-- encoded — the capability to open one quote and nothing else. NULL until the
+-- contractor generates a link, so old quotes stay unshared by default.
+-- (A UNIQUE INDEX rather than a UNIQUE constraint: Postgres allows many NULLs
+-- in a unique index, which is exactly what "not shared yet" needs.)
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS public_token TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS quotes_public_token_idx ON quotes (public_token);
+
+-- When the customer actually opened the link. This is what finally makes the
+-- 'viewed' status real — until now nothing could set it except the contractor
+-- guessing from a dropdown.
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS viewed_at TIMESTAMPTZ;
+
+-- When the customer accepted or declined from the public page, and why they
+-- declined if they said. `responded_at` also locks the link: a quote that has
+-- been answered can't be answered twice.
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS responded_at TIMESTAMPTZ;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS decline_reason TEXT NOT NULL DEFAULT '';
+
+-- Follow-up log. Counting nudges is what eventually answers "do my follow-ups
+-- actually win work?" — the win-rate screen reports it only once there are
+-- enough decided quotes on both sides to mean anything.
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS followup_sent_at TIMESTAMPTZ;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS followup_count INTEGER NOT NULL DEFAULT 0;
+
+-- Billing plan. Phase 1 writes these columns but gates nothing — the paywall
+-- lands in phase 2. Every existing account reads as 'free'.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+
+-- The money engine reads accepted quotes that never became an invoice, and
+-- equipment old enough to be worth a replacement call. Both want an index.
+CREATE INDEX IF NOT EXISTS quotes_user_status_idx ON quotes (user_id, status);
+CREATE INDEX IF NOT EXISTS invoices_quote_idx ON invoices (quote_id) WHERE quote_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS equipment_user_installed_idx ON equipment (user_id, installed_at);
+
+-- ===================================================================
+-- Settings migration — an editable business profile.
+--
+-- Until now every one of these lived only on the signup form, which made
+-- them write-once: a phone number typo'd at signup printed on every invoice
+-- the account ever produced, with no way to correct it.
+--
+-- Safe to re-run.
+-- ===================================================================
+
+-- The address customers should actually use. `users.email` is the LOGIN
+-- identifier and must not be published on paperwork or on a public quote
+-- page; this is the one that goes to customers. Blank falls back to nothing
+-- shown, never to the login address.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS contact_email TEXT NOT NULL DEFAULT '';
+
+-- Business details that belong on a quote or invoice.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS website TEXT NOT NULL DEFAULT '';
+
+-- Contractor license number. Several US states (CA, NV, AZ, FL among them)
+-- require it to appear on written estimates and invoices, and a contractor
+-- who can't put it on their paperwork can't use the app for real work.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS license_number TEXT NOT NULL DEFAULT '';
+
+-- Defaults applied to new documents, so the same numbers aren't retyped on
+-- every quote. Stored as the user's own preference, never guessed.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_tax_pct NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_payment_terms_days INTEGER NOT NULL DEFAULT 14;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_quote_notes TEXT NOT NULL DEFAULT '';
+
+-- Password reset tokens. Only the SHA-256 hash is stored, the same way
+-- sessions work — a database read alone can't reset anybody's password.
+-- Single use: `used_at` is stamped the moment a reset succeeds.
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id);
+CREATE INDEX IF NOT EXISTS password_resets_expires_idx ON password_resets (expires_at);
+
+-- ===================================================================
+-- Rate limiting.
+--
+-- Postgres-backed rather than in-memory, because serverless functions don't
+-- share memory: a counter held in one instance's RAM is invisible to the next
+-- request, which makes an in-process limiter close to decorative.
+--
+-- Safe to re-run.
+-- ===================================================================
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  bucket TEXT PRIMARY KEY,
+  count INTEGER NOT NULL DEFAULT 0,
+  window_start TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS rate_limits_window_idx ON rate_limits (window_start);

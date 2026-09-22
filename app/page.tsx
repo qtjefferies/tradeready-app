@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BriefingPreview } from "@/components/BriefingPreview";
 import {
   IconCheck,
   IconClock,
@@ -77,9 +78,10 @@ export default function LandingPage() {
           </h1>
           <div className="hazard mx-auto mt-8 h-2 w-40 rounded-full" aria-hidden="true" />
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-bone-300">
-            You&apos;re good at the work. The paperwork is what eats your evenings.
-            TradeReady runs the whole job — quote it, invoice it, get paid, get
-            reviewed, win the next one — from your phone, between jobs.
+            Every other trades app is a filing cabinet — somewhere to put the
+            quote you already wrote. TradeReady reads your records back to you
+            and finds the money in them: work you never invoiced, installs due
+            for replacement, customers who quietly stopped calling.
           </p>
           <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Link href="/signup" className="btn-primary font-display text-xl uppercase tracking-wider sm:!min-h-[60px] sm:!px-10">
@@ -178,30 +180,83 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <div className="card overflow-hidden">
-              <div className="hazard h-2" aria-hidden="true" />
-              <div className="p-6">
-                <p className="stat-label">Tuesday morning briefing</p>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border-2 border-safety-500/40 bg-safety-500/10 p-4">
-                    <p className="text-[15px] font-bold text-paper">2 quotes need follow-up</p>
-                    <p className="mt-1 text-sm text-bone-400">Miller water heater · sent 4 days ago</p>
-                  </div>
-                  <div className="rounded-xl border-2 border-alert-400/40 bg-alert-400/10 p-4">
-                    <p className="text-[15px] font-bold text-paper">1 invoice overdue</p>
-                    <p className="mt-1 text-sm text-bone-400">INV-118 · $1,240 · 6 days past due</p>
-                  </div>
-                  <div className="rounded-xl border border-ink-600 bg-ink-900 p-4">
-                    <p className="text-[15px] font-bold text-paper">3 jobs today</p>
-                    <p className="mt-1 text-sm text-bone-400">First starts 8:00 AM — panel upgrade, Oak St</p>
-                  </div>
-                  <div className="rounded-xl border border-ink-600 bg-ink-900 p-4">
-                    <p className="text-[15px] font-bold text-paper">1 review to ask for</p>
-                    <p className="mt-1 text-sm text-bone-400">Thursday&apos;s repipe went great — ask the Johnsons</p>
-                  </div>
-                </div>
-                <p className="mt-4 text-xs text-bone-600">
-                  Illustrative example of the briefing layout.
+            <BriefingPreview />
+          </div>
+        </div>
+      </section>
+
+      {/* THE EDGE — money found */}
+      <section id="money" className="scroll-mt-24 border-y-2 border-ink-700 bg-ink-900/60">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <span className="kicker">What nobody else does</span>
+              <h2 className="mt-4 font-display text-4xl uppercase leading-[1.03] tracking-wide text-paper md:text-5xl">
+                Your next job is already
+                <span className="text-safety-400"> in your own records.</span>
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-bone-300">
+                You don&apos;t need more leads. You need the ones you already
+                earned. TradeReady scans what you&apos;ve entered and puts a
+                number on what&apos;s sitting there unclaimed.
+              </p>
+              <ul className="mt-8 space-y-4">
+                {[
+                  {
+                    t: "Work you never invoiced",
+                    d: "An accepted quote with no invoice against it. It happens more than anyone admits, and it's the purest money on the list.",
+                  },
+                  {
+                    t: "Installs coming due",
+                    d: "That water heater went in eleven years ago. Priced from what you charged on your own past water heater jobs — never a made-up market rate.",
+                  },
+                  {
+                    t: "Customers who went quiet",
+                    d: "Three paid jobs, nothing in two years. Worth a text, and it writes the text.",
+                  },
+                  {
+                    t: "Declines worth revisiting",
+                    d: "They said no in January on a budget that reset in April.",
+                  },
+                ].map((x) => (
+                  <li key={x.t} className="flex gap-4">
+                    <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-money-400" aria-hidden="true" />
+                    <div>
+                      <p className="font-display text-lg uppercase tracking-wide text-paper">
+                        {x.t}
+                      </p>
+                      <p className="mt-1 text-[15px] leading-relaxed text-bone-400">
+                        {x.d}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-5">
+              <div className="card p-6 sm:p-7">
+                <p className="stat-label">Win rate by price</p>
+                <h3 className="mt-2 font-display text-2xl uppercase leading-tight tracking-wide text-paper">
+                  Find out why you lose the big ones
+                </h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-bone-300">
+                  Your win rate by price band, the labour rate on jobs you win
+                  against jobs you lose, and — because your customers open
+                  quotes through a link — whether a lost job was your price or
+                  a quote they never read. Those need opposite fixes.
+                </p>
+              </div>
+              <div className="card p-6 sm:p-7">
+                <p className="stat-label">Straight numbers</p>
+                <h3 className="mt-2 font-display text-2xl uppercase leading-tight tracking-wide text-paper">
+                  Every figure shows its working
+                </h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-bone-300">
+                  Each number says how many of your own jobs it came from. Too
+                  few to be meaningful, and it says so instead of printing a
+                  percentage you might price against. A tool that flatters you
+                  is worth less than no tool.
                 </p>
               </div>
             </div>
@@ -298,7 +353,15 @@ export default function LandingPage() {
             },
             {
               q: "What does the AI actually do?",
-              a: "Three things: drafts quote line items from your plain-words description, drafts follow-up and reminder messages, and drafts review requests. Every number and every word is yours to review before it goes anywhere.",
+              a: "Five things: drafts quote line items from your plain-words description, writes follow-ups for quotes gone quiet, payment reminders for overdue invoices, review requests after a job, and reactivation messages for past customers worth calling. Every number and every word is yours to review before it goes anywhere.",
+            },
+            {
+              q: "How does it know where my money is?",
+              a: "It reads what you've already entered. An accepted quote with no invoice against it is work you may never have billed. A water heater you installed twelve years ago is a replacement call. A customer who paid you three times and hasn't been back in two years is worth a text. Every figure it shows is priced from your own past jobs, and it tells you which ones — where it can't price something honestly, it says so instead of guessing.",
+            },
+            {
+              q: "What does it cost?",
+              a: "Nothing. Every feature, no limits, no card, no trial counting down. TradeReady is early and what it needs is contractors using it on real jobs and saying where it falls short.",
             },
             {
               q: "What happens to my data?",

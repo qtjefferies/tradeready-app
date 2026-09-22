@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Customer, Job, JobStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
 import { IconPlus, IconSchedule } from "./icons";
+import { useConfirm } from "./ConfirmDialog";
 
 const STATUSES: { value: JobStatus; label: string }[] = [
   { value: "scheduled", label: "Scheduled" },
@@ -23,6 +24,7 @@ export default function ScheduleClient({
   customers: Customer[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -118,7 +120,13 @@ export default function ScheduleClient({
   }
 
   async function remove(job: Job) {
-    if (!confirm(`Remove "${job.title}" from the schedule?`)) return;
+    const ok = await confirm({
+      title: `Remove "${job.title}"?`,
+      body: "It comes off the schedule and out of your briefing. The customer and any linked quote stay.",
+      confirmLabel: "Remove job",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/jobs/${job.id}`, { method: "DELETE" });
       if (!res.ok) {

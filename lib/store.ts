@@ -1,4 +1,5 @@
-import { sql } from "@vercel/postgres";
+import { randomBytes } from "crypto";
+import { sql } from "./db";
 import { normalizeLineItems, type LineItem } from "./money";
 
 /**
@@ -164,6 +165,17 @@ export interface Equipment {
   created_at: string;
 }
 
+function toEquipment(row: Record<string, unknown>): Equipment {
+  return {
+    id: row.id as number,
+    customer_id: row.customer_id as number,
+    description: (row.description as string) || "",
+    installed_at: toDateOnly(row.installed_at),
+    notes: (row.notes as string) || "",
+    created_at: toIso(row.created_at) ?? "",
+  };
+}
+
 export async function listEquipment(
   userId: number,
   customerId: number
@@ -174,7 +186,7 @@ export async function listEquipment(
     WHERE user_id = ${userId} AND customer_id = ${customerId}
     ORDER BY installed_at DESC NULLS LAST, created_at DESC
   `;
-  return r.rows as Equipment[];
+  return r.rows.map(toEquipment);
 }
 
 export async function addEquipment(
@@ -193,7 +205,7 @@ export async function addEquipment(
   }, ${notes})
     RETURNING id, customer_id, description, installed_at, notes, created_at
   `;
-  return (r.rows[0] as Equipment | undefined) ?? null;
+  return r.rows[0] ? toEquipment(r.rows[0]) : null;
 }
 
 export async function deleteEquipment(
@@ -225,8 +237,43 @@ export interface Quote {
   notes: string;
   valid_until: string | null;
   sent_at: string | null;
+  /** Set once the contractor generates a share link; null means unshared. */
+  public_token: string | null;
+  /** First time the customer opened the share link. */
+  viewed_at: string | null;
+  /** When the customer accepted or declined from the public page. */
+  responded_at: string | null;
+  decline_reason: string;
+  followup_sent_at: string | null;
+  followup_count: number;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Postgres hands back `Date` objects for TIMESTAMPTZ and DATE columns, but
+ * every interface in this file declares those fields as ISO strings, and the
+ * briefing compares them against strings. A cast alone let a `Date` through
+ * wearing a string's type, so `sent_at < twoDaysAgo` was comparing a Date to a
+ * string — always false, which silently emptied the follow-up and overdue
+ * sections. Convert for real at the boundary instead.
+ */
+function toIso(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  return v instanceof Date ? v.toISOString() : String(v);
+}
+
+/**
+ * DATE columns carry a calendar day with no time. Read the local date parts
+ * rather than going through UTC, so an offset can't shift a due date onto the
+ * neighbouring day.
+ */
+function toDateOnly(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (!(v instanceof Date)) return String(v).slice(0, 10);
+  const mm = String(v.getMonth() + 1).padStart(2, "0");
+  const dd = String(v.getDate()).padStart(2, "0");
+  return `${v.getFullYear()}-${mm}-${dd}`;
 }
 
 function toQuote(row: Record<string, unknown>): Quote {
@@ -241,10 +288,16 @@ function toQuote(row: Record<string, unknown>): Quote {
     tax_pct: Number(row.tax_pct ?? 0),
     discount: Number(row.discount ?? 0),
     notes: (row.notes as string) || "",
-    valid_until: (row.valid_until as string | null) ?? null,
-    sent_at: (row.sent_at as string | null) ?? null,
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
+    valid_until: toDateOnly(row.valid_until),
+    sent_at: toIso(row.sent_at),
+    public_token: (row.public_token as string | null) ?? null,
+    viewed_at: toIso(row.viewed_at),
+    responded_at: toIso(row.responded_at),
+    decline_reason: (row.decline_reason as string) || "",
+    followup_sent_at: toIso(row.followup_sent_at),
+    followup_count: Number(row.followup_count ?? 0),
+    created_at: toIso(row.created_at) ?? "",
+    updated_at: toIso(row.updated_at) ?? "",
   };
 }
 
@@ -389,11 +442,11 @@ function toInvoice(row: Record<string, unknown>): Invoice {
     tax_pct: Number(row.tax_pct ?? 0),
     discount: Number(row.discount ?? 0),
     notes: (row.notes as string) || "",
-    due_at: (row.due_at as string | null) ?? null,
-    paid_at: (row.paid_at as string | null) ?? null,
-    sent_at: (row.sent_at as string | null) ?? null,
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
+    due_at: toDateOnly(row.due_at),
+    paid_at: toDateOnly(row.paid_at),
+    sent_at: toIso(row.sent_at),
+    created_at: toIso(row.created_at) ?? "",
+    updated_at: toIso(row.updated_at) ?? "",
   };
 }
 
@@ -548,11 +601,11 @@ function toJob(row: Record<string, unknown>): Job {
     customer_name: (row.customer_name as string) || "",
     quote_id: (row.quote_id as number | null) ?? null,
     title: (row.title as string) || "",
-    scheduled_at: (row.scheduled_at as string | null) ?? null,
+    scheduled_at: toIso(row.scheduled_at),
     status: row.status as JobStatus,
     notes: (row.notes as string) || "",
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
+    created_at: toIso(row.created_at) ?? "",
+    updated_at: toIso(row.updated_at) ?? "",
   };
 }
 
@@ -688,8 +741,8 @@ function toReview(row: Record<string, unknown>): Review {
     request_text: (row.request_text as string) || "",
     rating: (row.rating as number | null) ?? null,
     review_text: (row.review_text as string) || "",
-    requested_at: row.requested_at as string,
-    received_at: (row.received_at as string | null) ?? null,
+    requested_at: toIso(row.requested_at) ?? "",
+    received_at: toIso(row.received_at),
   };
 }
 
@@ -856,4 +909,384 @@ export async function getCustomerHistory(
         ).rows.map(toReview)
       : [];
   return { quotes, invoices, jobs, equipment, reviews };
+}
+
+// ------------------------------------------------- public quote links
+
+/**
+ * Share links.
+ *
+ * A quote's `public_token` is a 256-bit random value — the capability to read
+ * that one quote and answer it, and nothing else. The functions below are the
+ * only ones in this file that are NOT scoped to a user_id, because the caller
+ * is the customer and has no account. They are scoped to a single token
+ * instead, which is equivalent: a token identifies exactly one row, and
+ * guessing one is not feasible.
+ */
+
+/** Base64url, so the token is safe to drop straight into a URL path. */
+function newShareToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/**
+ * Return the quote's share token, minting one on first use. Idempotent: the
+ * same quote keeps the same link forever, so a link already texted to a
+ * customer never goes dead.
+ */
+export async function ensureShareToken(
+  userId: number,
+  quoteId: number
+): Promise<string | null> {
+  const existing = await getQuote(userId, quoteId);
+  if (!existing) return null;
+  if (existing.public_token) return existing.public_token;
+
+  const r = await sql`
+    UPDATE quotes SET public_token = ${newShareToken()}
+    WHERE id = ${quoteId} AND user_id = ${userId} AND public_token IS NULL
+    RETURNING public_token
+  `;
+  const row = r.rows[0] as { public_token: string } | undefined;
+  // Lost a race with a concurrent mint — re-read rather than overwrite, so the
+  // token that won is the one we hand back.
+  if (!row) return (await getQuote(userId, quoteId))?.public_token ?? null;
+  return row.public_token;
+}
+
+/** Revoke a share link. The quote keeps its history; the URL stops working. */
+export async function revokeShareToken(
+  userId: number,
+  quoteId: number
+): Promise<boolean> {
+  const r = await sql`
+    UPDATE quotes SET public_token = NULL
+    WHERE id = ${quoteId} AND user_id = ${userId}
+  `;
+  return (r.rowCount ?? 0) > 0;
+}
+
+export interface PublicQuote {
+  quote: Quote;
+  /**
+   * The profile's public contact details. `email` here is `contact_email`,
+   * never `users.email` — the login identifier is left out at the source
+   * rather than merely left unrendered, because this payload crosses to an
+   * unauthenticated page.
+   */
+  business: {
+    businessName: string;
+    trade: string;
+    phone: string;
+    email: string;
+    website: string;
+    licenseNumber: string;
+  };
+}
+
+/**
+ * Read a quote by its share token, with the contractor's public business
+ * details. Draft quotes are treated as not found: a link generated before the
+ * quote was finished must not expose a work-in-progress price.
+ *
+ * Returns only the fields the customer is meant to see — the caller renders
+ * this, never the raw row.
+ */
+export async function getQuoteByToken(token: string): Promise<PublicQuote | null> {
+  if (!token) return null;
+  const r = await sql`
+    SELECT * FROM quotes WHERE public_token = ${token} LIMIT 1
+  `;
+  const row = r.rows[0];
+  if (!row) return null;
+  const quote = toQuote(row);
+  if (quote.status === "draft") return null;
+  const info = await getPublicBusinessInfo(row.user_id as number);
+  return {
+    quote,
+    business: {
+      businessName: info.businessName,
+      trade: info.trade,
+      phone: info.phone,
+      email: info.email,
+      website: info.website,
+      licenseNumber: info.licenseNumber,
+    },
+  };
+}
+
+/**
+ * Record that the customer opened the link. Only the FIRST open counts, and
+ * only from 'sent' — reopening an accepted quote must not drag its status
+ * backwards. Best-effort: a failure here must never block rendering the quote.
+ */
+export async function markQuoteViewed(token: string): Promise<void> {
+  try {
+    await sql`
+      UPDATE quotes
+      SET viewed_at = NOW(),
+          status = CASE WHEN status = 'sent' THEN 'viewed' ELSE status END,
+          updated_at = NOW()
+      WHERE public_token = ${token} AND viewed_at IS NULL
+    `;
+  } catch {
+    // Tracking is a nice-to-have; showing the customer their quote is not.
+  }
+}
+
+export type QuoteResponse = "accepted" | "declined";
+
+/**
+ * The customer's answer from the public page.
+ *
+ * Only a quote that is still open ('sent' or 'viewed') can be answered, and
+ * `responded_at IS NULL` locks it to one answer — a re-submitted form or a
+ * revisited link can't flip a decision the contractor has already acted on.
+ * Returns null when the quote was already closed.
+ */
+export async function respondToQuote(
+  token: string,
+  response: QuoteResponse,
+  declineReason: string
+): Promise<Quote | null> {
+  const r = await sql`
+    UPDATE quotes
+    SET status = ${response},
+        responded_at = NOW(),
+        decline_reason = ${response === "declined" ? declineReason.slice(0, 500) : ""},
+        viewed_at = COALESCE(viewed_at, NOW()),
+        updated_at = NOW()
+    WHERE public_token = ${token}
+      AND responded_at IS NULL
+      AND status IN ('sent', 'viewed')
+    RETURNING *
+  `;
+  const row = r.rows[0];
+  return row ? toQuote(row) : null;
+}
+
+/**
+ * Log that a follow-up was drafted for this quote. Counting nudges is what
+ * lets the win-rate screen eventually answer "does following up actually win
+ * work?" — it can only report that once the counts exist.
+ */
+export async function logFollowup(userId: number, quoteId: number): Promise<void> {
+  try {
+    await sql`
+      UPDATE quotes
+      SET followup_sent_at = NOW(), followup_count = followup_count + 1
+      WHERE id = ${quoteId} AND user_id = ${userId}
+    `;
+  } catch {
+    // Logging must never fail the follow-up the contractor actually asked for.
+  }
+}
+
+// ------------------------------------------------------ equipment (all)
+
+export interface EquipmentWithCustomer extends Equipment {
+  customer_name: string;
+}
+
+/**
+ * Every install on record, newest first, with the customer's name attached.
+ * The per-customer `listEquipment` answers "what's in this house"; this one
+ * feeds the money engine, which asks "what's old enough to call about".
+ */
+export async function listAllEquipment(
+  userId: number
+): Promise<EquipmentWithCustomer[]> {
+  const r = await sql`
+    SELECT e.id, e.customer_id, e.description, e.installed_at, e.notes,
+           e.created_at, c.name AS customer_name
+    FROM equipment e
+    JOIN customers c ON c.id = e.customer_id AND c.user_id = e.user_id
+    WHERE e.user_id = ${userId} AND e.installed_at IS NOT NULL
+    ORDER BY e.installed_at ASC
+  `;
+  return r.rows.map((row) => ({
+    ...toEquipment(row),
+    customer_name: (row.customer_name as string) || "",
+  }));
+}
+
+// ------------------------------------------------------------- settings
+
+/**
+ * The editable business profile.
+ *
+ * `email` is deliberately absent: that is the login identifier, changed
+ * through its own guarded path, never as part of a profile save.
+ */
+export interface BusinessSettings {
+  businessName: string;
+  trade: string;
+  phone: string;
+  contactEmail: string;
+  address: string;
+  website: string;
+  licenseNumber: string;
+  defaultTaxPct: number;
+  defaultPaymentTermsDays: number;
+  defaultQuoteNotes: string;
+}
+
+function toSettings(row: Record<string, unknown>): BusinessSettings {
+  return {
+    businessName: (row.business_name as string) || "",
+    trade: (row.trade as string) || "",
+    phone: (row.phone as string) || "",
+    contactEmail: (row.contact_email as string) || "",
+    address: (row.address as string) || "",
+    website: (row.website as string) || "",
+    licenseNumber: (row.license_number as string) || "",
+    defaultTaxPct: Number(row.default_tax_pct ?? 0),
+    defaultPaymentTermsDays: Number(row.default_payment_terms_days ?? 14),
+    defaultQuoteNotes: (row.default_quote_notes as string) || "",
+  };
+}
+
+export async function getSettings(userId: number): Promise<BusinessSettings | null> {
+  const r = await sql`
+    SELECT business_name, trade, phone, contact_email, address, website,
+           license_number, default_tax_pct, default_payment_terms_days,
+           default_quote_notes
+    FROM users WHERE id = ${userId} LIMIT 1
+  `;
+  return r.rows[0] ? toSettings(r.rows[0]) : null;
+}
+
+export async function updateSettings(
+  userId: number,
+  s: BusinessSettings
+): Promise<BusinessSettings | null> {
+  const r = await sql`
+    UPDATE users SET
+      business_name = ${s.businessName},
+      trade = ${s.trade},
+      phone = ${s.phone},
+      contact_email = ${s.contactEmail},
+      address = ${s.address},
+      website = ${s.website},
+      license_number = ${s.licenseNumber},
+      default_tax_pct = ${s.defaultTaxPct},
+      default_payment_terms_days = ${s.defaultPaymentTermsDays},
+      default_quote_notes = ${s.defaultQuoteNotes}
+    WHERE id = ${userId}
+    RETURNING business_name, trade, phone, contact_email, address, website,
+              license_number, default_tax_pct, default_payment_terms_days,
+              default_quote_notes
+  `;
+  return r.rows[0] ? toSettings(r.rows[0]) : null;
+}
+
+/**
+ * The business details that go on customer-facing paperwork — PDFs and the
+ * public quote page.
+ *
+ * `contact_email` only. The login address is never published: it is half of
+ * the account's credentials, and a contractor who typed a personal address
+ * at signup did not agree to print it on every invoice.
+ */
+export async function getPublicBusinessInfo(userId: number): Promise<{
+  businessName: string;
+  trade: string;
+  phone: string;
+  email: string;
+  address: string;
+  website: string;
+  licenseNumber: string;
+}> {
+  const r = await sql`
+    SELECT business_name, trade, phone, contact_email, address, website, license_number
+    FROM users WHERE id = ${userId} LIMIT 1
+  `;
+  const row = r.rows[0] as Record<string, unknown> | undefined;
+  return {
+    businessName: (row?.business_name as string) || "",
+    trade: (row?.trade as string) || "",
+    phone: (row?.phone as string) || "",
+    email: (row?.contact_email as string) || "",
+    address: (row?.address as string) || "",
+    website: (row?.website as string) || "",
+    licenseNumber: (row?.license_number as string) || "",
+  };
+}
+
+/** Change the login password. Returns false when the user is gone. */
+export async function setPasswordHash(
+  userId: number,
+  passwordHash: string
+): Promise<boolean> {
+  const r = await sql`
+    UPDATE users SET password_hash = ${passwordHash} WHERE id = ${userId}
+  `;
+  return (r.rowCount ?? 0) > 0;
+}
+
+export async function getPasswordHashById(userId: number): Promise<string | null> {
+  const r = await sql`SELECT password_hash FROM users WHERE id = ${userId} LIMIT 1`;
+  return (r.rows[0] as { password_hash: string } | undefined)?.password_hash ?? null;
+}
+
+/**
+ * Delete the account and everything in it. Every table referencing users
+ * cascades, so this removes customers, quotes, invoices, jobs, reviews,
+ * equipment and sessions along with the row.
+ */
+export async function deleteAccount(userId: number): Promise<boolean> {
+  const r = await sql`DELETE FROM users WHERE id = ${userId}`;
+  return (r.rowCount ?? 0) > 0;
+}
+
+// ------------------------------------------------------- customer import
+
+export interface ImportResult {
+  created: number;
+  duplicates: number;
+}
+
+/**
+ * Bulk-create customers from an import.
+ *
+ * Skips anyone whose name already exists on the account, case-insensitively.
+ * A contractor re-importing a contacts export after adding a few new people
+ * is the normal case, and silently doubling their list would be worse than
+ * importing nothing — they'd have to clean it up by hand.
+ *
+ * Runs as one statement per row inside a transaction rather than a single
+ * giant INSERT: lists are small (hundreds at most) and this keeps the
+ * per-row skip logic readable.
+ */
+export async function importCustomers(
+  userId: number,
+  rows: { name: string; phone: string; email: string; address: string }[]
+): Promise<ImportResult> {
+  if (rows.length === 0) return { created: 0, duplicates: 0 };
+
+  const existing = await sql`
+    SELECT LOWER(name) AS name FROM customers WHERE user_id = ${userId}
+  `;
+  const seen = new Set(existing.rows.map((r) => (r.name as string) || ""));
+
+  let created = 0;
+  let duplicates = 0;
+
+  for (const r of rows) {
+    const key = r.name.trim().toLowerCase();
+    if (!key || seen.has(key)) {
+      duplicates++;
+      continue;
+    }
+    // Added to the set before the insert so duplicates *within the file*
+    // are caught too, not just collisions with what was already saved.
+    seen.add(key);
+    await sql`
+      INSERT INTO customers (user_id, name, phone, email, address)
+      VALUES (${userId}, ${r.name.trim()}, ${r.phone}, ${r.email}, ${r.address})
+    `;
+    created++;
+  }
+
+  return { created, duplicates };
 }

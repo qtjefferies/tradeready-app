@@ -3,8 +3,11 @@ import { computeTotals, formatUSD, type LineItem } from "./money";
 
 /**
  * Branded PDF builder for quotes and invoices.
- * Header carries the contractor's business name, trade, phone, and email;
- * line items split labor vs materials; totals show discount and tax.
+ * Header carries the contractor's business name, trade, and public contact
+ * details; line items split labor vs materials; totals show discount and tax.
+ *
+ * The email here is the profile's CONTACT address, never the login address —
+ * see `getPublicBusinessInfo`. These documents go to customers.
  */
 
 export const runtime = "nodejs";
@@ -19,7 +22,11 @@ export interface BusinessInfo {
   businessName: string;
   trade: string;
   phone: string;
+  /** The public contact address. NOT the login email. */
   email: string;
+  address: string;
+  website: string;
+  licenseNumber: string;
 }
 
 export interface DocumentData {
@@ -57,10 +64,24 @@ function header(doc: PDFKit.PDFDocument, biz: BusinessInfo, d: DocumentData) {
     doc.moveDown(0.15);
     doc.font("Helvetica").fontSize(10).fillColor(MUTED).text(biz.trade);
   }
-  const contact = [biz.phone, biz.email].filter(Boolean).join("  |  ");
+  const contact = [biz.phone, biz.email, biz.website].filter(Boolean).join("  |  ");
   if (contact) {
     doc.moveDown(0.1);
     doc.font("Helvetica").fontSize(9.5).fillColor(MUTED).text(contact);
+  }
+  if (biz.address) {
+    doc.moveDown(0.1);
+    doc.font("Helvetica").fontSize(9.5).fillColor(MUTED).text(biz.address);
+  }
+  // Several US states require the license number on written estimates and
+  // invoices, so it sits in the header rather than buried in the footer.
+  if (biz.licenseNumber) {
+    doc.moveDown(0.1);
+    doc
+      .font("Helvetica")
+      .fontSize(9.5)
+      .fillColor(MUTED)
+      .text(`License ${biz.licenseNumber}`);
   }
 
   doc.moveDown(0.8);

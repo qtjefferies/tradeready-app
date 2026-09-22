@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/require-user";
-import { getBusinessProfile, getInvoice } from "@/lib/store";
+import { getPublicBusinessInfo, getInvoice } from "@/lib/store";
 import { buildDocumentPdf, pdfResponse, safeFilename } from "@/lib/pdf";
 import { badRequest } from "@/lib/validate";
 
@@ -33,7 +33,7 @@ export async function GET(
   try {
     const [invoice, biz] = await Promise.all([
       getInvoice(auth.user.id, id),
-      getBusinessProfile(auth.user.id),
+      getPublicBusinessInfo(auth.user.id),
     ]);
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
@@ -46,12 +46,7 @@ export async function GET(
     if (invoice.paid_at) meta.push({ label: "Paid", value: invoice.paid_at });
 
     const pdf = await buildDocumentPdf(
-      {
-        businessName: biz.businessName,
-        trade: biz.trade,
-        phone: biz.phone,
-        email: biz.email,
-      },
+      biz,
       {
         kind: "invoice",
         number: `INV-${invoice.id}`,

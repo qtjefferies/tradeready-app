@@ -7,6 +7,7 @@ import { computeTotals, formatUSD } from "@/lib/money";
 import type { Customer, CustomerHistory } from "@/lib/store";
 import { StatusBadge } from "./Badges";
 import { IconPlus } from "./icons";
+import { useConfirm } from "./ConfirmDialog";
 
 /**
  * CustomerDetail — customer profile + full job history (the retention moat):
@@ -20,6 +21,7 @@ export default function CustomerDetail({
   history: CustomerHistory;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(customer.name);
   const [phone, setPhone] = useState(customer.phone);
@@ -103,7 +105,13 @@ export default function CustomerDetail({
   }
 
   async function removeEquipment(eqId: number) {
-    if (!confirm("Delete this equipment record?")) return;
+    const ok = await confirm({
+      title: "Delete this equipment record?",
+      body: "You'll lose the install date, which is what puts this customer on your replacement-call list later.",
+      confirmLabel: "Delete record",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/customers/${customer.id}`, {
         method: "PUT",
@@ -122,12 +130,13 @@ export default function CustomerDetail({
   }
 
   async function removeCustomer() {
-    if (
-      !confirm(
-        `Delete ${customer.name}? Their quotes, invoices, and jobs stay, but the customer record and equipment history go.`
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Delete ${customer.name}?`,
+      body: "Their quotes, invoices and jobs stay on file, but the customer record and all equipment history go — including anything Money Found was tracking for them.",
+      confirmLabel: "Delete customer",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/customers/${customer.id}`, { method: "DELETE" });
       if (!res.ok) {

@@ -39,7 +39,11 @@ export function normalizeLineItems(raw: unknown): LineItem[] {
         typeof o.description === "string" ? o.description.trim() : "";
       const qty = Math.max(0, toNumber(o.qty, 1));
       const unit_price = Math.max(0, toNumber(o.unit_price, 0));
-      const kind: LineItemKind = o.kind === "materials" ? "materials" : "labor";
+      // Tolerate the singular: the AI drafter routinely returns "material",
+      // and an exact-match check silently relabelled those rows as labor —
+      // which also threw off the labor/materials subtotals below.
+      const rawKind = typeof o.kind === "string" ? o.kind.trim().toLowerCase() : "";
+      const kind: LineItemKind = rawKind.startsWith("material") ? "materials" : "labor";
       return { description, qty, unit_price, kind };
     })
     .filter((i) => i.description.length > 0 || i.unit_price > 0);

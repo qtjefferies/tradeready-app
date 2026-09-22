@@ -35,3 +35,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+check-ai.sh
+
+# Local AI verification helpers and env backups (never commit)
+.ai-format.py
+.env.backup-*
+.env.local

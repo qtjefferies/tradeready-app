@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
-import { geminiConfigured } from "@/lib/gemini";
+import { aiConfigured } from "@/lib/ai";
 
 /**
  * GET /api/health — liveness probe. Reports which backends are configured
@@ -10,6 +10,6 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     database: isDatabaseConfigured() ? "connected" : "not_configured",
-    ai: geminiConfigured() ? "configured" : "not_configured",
+    ai: aiConfigured() ? "configured" : "not_configured",
   });
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Anton, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
@@ -7,9 +7,24 @@ import "./globals.css";
 
 import { siteUrl, siteName } from "@/lib/site";
 import AuthNav from "@/components/AuthNav";
+import { ToastProvider } from "@/components/Toast";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-display", display: "swap" });
+
+/**
+ * Mobile chrome. `viewportFit: "cover"` lets the bottom tab bar paint into
+ * the iPhone home-indicator area, which the nav's safe-area padding already
+ * accounts for; without it there's a dead band under the tabs.
+ */
+export const viewport: Viewport = {
+  themeColor: "#0a0b0d",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -47,6 +62,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${anton.variable}`}>
       <body className="min-h-screen bg-ink-950 font-sans text-paper antialiased">
+        <ToastProvider>
+        <ConfirmProvider>
+        {/* Keyboard users shouldn't have to tab through the whole header on
+            every page load to reach what they came for. */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-safety-400 focus:px-5 focus:py-3 focus:font-bold focus:text-ink-950"
+        >
+          Skip to content
+        </a>
         <header className="fixed inset-x-0 top-0 z-50 border-b-2 border-ink-700 bg-ink-950/90 backdrop-blur-xl">
           <nav className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-4 sm:px-6">
             <Logo />
@@ -54,8 +79,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/#how-it-works" className="transition hover:text-paper">
                 How it works
               </Link>
-              <Link href="/#features" className="transition hover:text-paper">
-                Features
+              <Link href="/#money" className="transition hover:text-paper">
+                Money found
+              </Link>
+              <Link href="/pricing" className="transition hover:text-paper">
+                Pricing
               </Link>
               <Link href="/#faq" className="transition hover:text-paper">
                 FAQ
@@ -66,7 +94,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="hazard h-1" aria-hidden="true" />
         </header>
 
-        <main className="pt-[72px]">{children}</main>
+        <main id="main" className="pt-[72px]">{children}</main>
 
         <footer className="border-t-2 border-ink-700 bg-ink-900/60">
           <div className="hazard h-1.5" aria-hidden="true" />
@@ -81,6 +109,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div>
               <h4 className="mb-3 font-display text-sm uppercase tracking-[0.14em] text-paper">Product</h4>
               <ul className="space-y-2.5 text-sm text-bone-500">
+                <li>
+                  <Link href="/pricing" className="inline-block min-h-[32px] py-1 transition hover:text-paper">
+                    Pricing
+                  </Link>
+                </li>
                 <li>
                   <Link href="/signup" className="inline-block min-h-[32px] py-1 transition hover:text-paper">
                     Get started
@@ -119,6 +152,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
         </footer>
         <Analytics />
+        </ConfirmProvider>
+        </ToastProvider>
       </body>
     </html>
   );

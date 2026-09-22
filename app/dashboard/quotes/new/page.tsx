@@ -10,11 +10,31 @@ export const metadata: Metadata = {
 
 export default async function NewQuotePage() {
   const user = await requireUser();
-  const customers = await store.listCustomers(user.id);
+  const [customers, settings] = await Promise.all([
+    store.listCustomers(user.id),
+    store.getSettings(user.id),
+  ]);
+
+  // Settings promises these are "applied to new quotes so you stop retyping
+  // the same numbers" — this is where that promise is kept. A quote already
+  // saved keeps whatever it was saved with; only new ones get the defaults.
+  const defaults = settings
+    ? {
+        taxPct: settings.defaultTaxPct,
+        notes: settings.defaultQuoteNotes,
+        validDays: settings.defaultPaymentTermsDays,
+      }
+    : null;
+
   return (
     <div>
       <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">New quote</h2>
-      <QuoteEditor initial={null} customers={customers} trade={user.trade} />
+      <QuoteEditor
+        initial={null}
+        customers={customers}
+        trade={user.trade}
+        defaults={defaults}
+      />
     </div>
   );
 }

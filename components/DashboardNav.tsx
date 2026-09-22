@@ -6,6 +6,7 @@ import {
   IconBriefing,
   IconCustomers,
   IconInvoice,
+  IconMoneyFound,
   IconQuote,
   IconReviews,
   IconSchedule,
@@ -18,6 +19,9 @@ import {
  */
 const LINKS = [
   { href: "/dashboard", label: "Briefing", short: "Briefing", Icon: IconBriefing },
+  // Second, not last: this is the screen that earns the subscription, and a
+  // tab nobody scrolls to is a feature nobody uses.
+  { href: "/dashboard/money", label: "Money", short: "Money", Icon: IconMoneyFound },
   { href: "/dashboard/quotes", label: "Quotes", short: "Quotes", Icon: IconQuote },
   { href: "/dashboard/invoices", label: "Invoices", short: "Invoices", Icon: IconInvoice },
   { href: "/dashboard/schedule", label: "Schedule", short: "Schedule", Icon: IconSchedule },

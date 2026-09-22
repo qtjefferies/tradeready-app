@@ -7,7 +7,11 @@ import LineItemsEditor from "./LineItemsEditor";
 import { computeTotals, formatUSD, type LineItem } from "@/lib/money";
 import type { Customer, Quote, QuoteStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
+import QuoteShareLink from "./QuoteShareLink";
+import CustomerPicker, { type CustomerSelection } from "./CustomerPicker";
 import { IconDownload } from "./icons";
+import { useConfirm } from "./ConfirmDialog";
+import { useToast } from "./Toast";
 
 const STATUSES: { value: QuoteStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
@@ -24,29 +28,64 @@ const STATUSES: { value: QuoteStatus; label: string }[] = [
  * - labor/materials line items, tax %, flat discount, live totals
  * - status workflow, PDF download, delete
  */
+export interface QuoteDefaults {
+  taxPct: number;
+  notes: string;
+  /** Days from today to pre-fill "valid until". */
+  validDays: number;
+}
+
+/** Today + n days as YYYY-MM-DD, read from local parts so no timezone drift. */
+function dateInDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
 export default function QuoteEditor({
   initial,
   customers,
   trade,
+  defaults = null,
 }: {
   initial: Quote | null;
   customers: Customer[];
   trade: string;
+  /** Only passed for a NEW quote — an existing one keeps what it was saved with. */
+  defaults?: QuoteDefaults | null;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [customerId, setCustomerId] = useState<string>(
-    initial?.customer_id ? String(initial.customer_id) : ""
-  );
-  const [customerName, setCustomerName] = useState(initial?.customer_name ?? "");
+  const [customer, setCustomer] = useState<CustomerSelection>({
+    id: initial?.customer_id ?? null,
+    name: initial?.customer_name ?? "",
+  });
   const [status, setStatus] = useState<QuoteStatus>(initial?.status ?? "draft");
   const [lineItems, setLineItems] = useState<LineItem[]>(
     initial?.line_items ?? []
   );
-  const [taxPct, setTaxPct] = useState<number>(initial?.tax_pct ?? 0);
+  const [taxPct, setTaxPct] = useState<number>(
+    initial?.tax_pct ?? defaults?.taxPct ?? 0
+  );
   const [discount, setDiscount] = useState<number>(initial?.discount ?? 0);
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [validUntil, setValidUntil] = useState(initial?.valid_until ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? defaults?.notes ?? "");
+  const [validUntil, setValidUntil] = useState(
+    initial?.valid_until ??
+      (defaults && defaults.validDays > 0 ? dateInDays(defaults.validDays) : "")
+  );
+
+  /**
+   * Tax, discount, expiry and notes are folded away on a new quote. They are
+   * either already right (seeded from Settings) or irrelevant to a first
+   * quote, and showing four more boxes turns "who, what, how much" into a
+   * form. An existing quote opens them expanded, since someone editing is
+   * usually there to change exactly these.
+   */
+  const [showDetail, setShowDetail] = useState(Boolean(initial));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -65,12 +104,8 @@ export default function QuoteEditor({
 
   const isNew = !initial;
 
-  function resolvedCustomer(): { id: number | null; name: string } {
-    if (customerId) {
-      const c = customers.find((x) => String(x.id) === customerId);
-      return { id: c ? c.id : null, name: c ? c.name : customerName };
-    }
-    return { id: null, name: customerName.trim() };
+  function resolvedCustomer(): CustomerSelection {
+    return { id: customer.id, name: customer.name.trim() };
   }
 
   async function runAssist() {
@@ -109,7 +144,7 @@ export default function QuoteEditor({
       return;
     }
     if (!cust.name) {
-      setError("Pick a customer or type a customer name.");
+      setError("Pick a customer, or add a new one with the New button.");
       return;
     }
     setSaving(true);
@@ -143,6 +178,15 @@ export default function QuoteEditor({
         setError(data.error || "Couldn't save the quote.");
         return;
       }
+      // Saving used to be silent, which reads the same as nothing happening.
+      const next = nextStatus ?? status;
+      toast(
+        isNew
+          ? next === "sent"
+            ? "Quote saved and marked sent. Share the link to let them accept it."
+            : "Quote saved. Add a share link when you're ready to send it."
+          : "Changes saved."
+      );
       router.push(`/dashboard/quotes/${data.quote.id}`);
       router.refresh();
     } catch {
@@ -153,7 +197,14 @@ export default function QuoteEditor({
   }
 
   async function remove() {
-    if (!initial || !confirm("Delete this quote? This can't be undone.")) return;
+    if (!initial) return;
+    const ok = await confirm({
+      title: "Delete this quote?",
+      body: "The quote and its share link are gone for good. If it's already with a customer, their link will stop working.",
+      confirmLabel: "Delete quote",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/quotes/${initial.id}`, { method: "DELETE" });
@@ -199,40 +250,13 @@ export default function QuoteEditor({
           />
         </div>
 
-        <div className="mb-5 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="q-customer" className="label-dark">Customer</label>
-            <select
-              id="q-customer"
-              value={customerId}
-              onChange={(e) => {
-                setCustomerId(e.target.value);
-                if (e.target.value) setCustomerName("");
-              }}
-              className="input-dark"
-            >
-              <option value="">Type a name instead…</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="q-customer-name" className="label-dark">
-              {customerId ? "Customer (selected)" : "Customer name"}
-            </label>
-            <input
-              id="q-customer-name"
-              type="text"
-              value={customerId ? customers.find((c) => String(c.id) === customerId)?.name ?? "" : customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              disabled={Boolean(customerId)}
-              placeholder="e.g. Jane Miller"
-              className="input-dark disabled:opacity-60"
-            />
-          </div>
+        <div className="mb-5">
+          <CustomerPicker
+            customers={customers}
+            value={customer}
+            onChange={setCustomer}
+            idPrefix="q"
+          />
         </div>
 
         <div className="mb-6">
@@ -283,6 +307,21 @@ export default function QuoteEditor({
 
         <LineItemsEditor initial={initial?.line_items ?? []} onChange={setLineItems} />
 
+        {!showDetail ? (
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            className="btn-ghost mb-5 !px-0 text-sm"
+          >
+            + Tax, discount, expiry &amp; notes
+            {(taxPct > 0 || notes || validUntil) && (
+              <span className="ml-1 font-normal text-bone-500">
+                (set from your defaults)
+              </span>
+            )}
+          </button>
+        ) : (
+          <div className="mb-5">
         <div className="mb-5 grid gap-4 sm:grid-cols-3">
           <div>
             <label htmlFor="q-tax" className="label-dark">Tax %</label>
@@ -332,6 +371,8 @@ export default function QuoteEditor({
             className="input-dark"
           />
         </div>
+          </div>
+        )}
 
         <div className="sticky-actions mt-6">
           <div className="flex flex-col gap-3">
@@ -435,6 +476,16 @@ export default function QuoteEditor({
               </Link>
             )}
           </div>
+        )}
+
+        {!isNew && (
+          <QuoteShareLink
+            quoteId={initial!.id}
+            status={initial!.status}
+            initialToken={initial!.public_token}
+            viewedAt={initial!.viewed_at}
+            respondedAt={initial!.responded_at}
+          />
         )}
       </aside>
     </div>

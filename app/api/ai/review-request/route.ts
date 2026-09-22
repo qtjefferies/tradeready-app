@@ -3,20 +3,40 @@ import { requireUser } from "@/lib/require-user";
 import { getCustomer, getJob } from "@/lib/store";
 import {
   draftReviewRequest,
-  geminiConfigured,
-  geminiErrorResponse,
-  geminiNotConfigured,
-} from "@/lib/gemini";
+  aiConfigured,
+  aiErrorResponse,
+  aiNotConfigured,
+} from "@/lib/ai";
 import { badRequest, readJson } from "@/lib/validate";
+import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
+
+/**
+ * A slow turn shouldn't hit the platform timeout, which returns an error page
+ * instead of this route's honest JSON. The route finishes as soon as the model
+ * answers; this is only the ceiling.
+ */
+export const maxDuration = 120;
 
 /**
  * POST /api/ai/review-request — draft a review-request text after a job.
  * Body: { customer_id?: number, job_id?: number, customer_name?: string, job_title?: string }
+ *
+ * Every call here costs money at the AI provider, and an account is free to
+ * create — so without a cap, one signup with a loop is an open tap on the
+ * bill. The per-account limit is far above real use and only bites automation.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
-  if (!geminiConfigured()) return geminiNotConfigured();
+
+  const limit = await rateLimit(`ai:review-request:${auth.user.id}`, 60, 3600);
+  if (!limit.allowed) {
+    return tooManyRequests(
+      limit,
+      "You've hit the hourly limit for AI drafting. Try again shortly."
+    );
+  }
+  if (!aiConfigured()) return aiNotConfigured();
 
   const body = await readJson(req);
   if (body === null) return badRequest("Invalid request body.");
@@ -59,6 +79,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message });
   } catch (err) {
     console.error("[ai/review-request] failed:", err);
-    return geminiErrorResponse(err);
+    return aiErrorResponse(err);
   }
 }

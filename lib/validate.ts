@@ -68,6 +68,13 @@ export function parseCustomer(
   body: unknown
 ): { value: ParsedCustomer } | { error: string } {
   const b = (body ?? {}) as Record<string, unknown>;
+  // `str` returns null for empty AND for over-length, so the two cases are
+  // separated here. Telling someone "name is required" while they're staring
+  // at a filled-in field sends them looking for a problem that isn't there.
+  const rawName = typeof b.name === "string" ? b.name.trim() : "";
+  if (rawName.length > 200) {
+    return { error: "That name is too long — keep it under 200 characters." };
+  }
   const name = str(b.name, 200);
   if (!name) return { error: "Customer name is required." };
   return {
@@ -244,6 +251,61 @@ export function parseReviewCreate(
       customer_name,
       job_id: optIntId(b.job_id),
       request_text: optStr(b.request_text),
+    },
+  };
+}
+
+// ----------------------------------------------------------------- settings
+
+export interface ParsedSettings {
+  businessName: string;
+  trade: string;
+  phone: string;
+  contactEmail: string;
+  address: string;
+  website: string;
+  licenseNumber: string;
+  defaultTaxPct: number;
+  defaultPaymentTermsDays: number;
+  defaultQuoteNotes: string;
+}
+
+/** Same shape the signup route accepts, so the two agree on what's valid. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function parseSettings(
+  body: unknown
+): { value: ParsedSettings } | { error: string } {
+  const b = (body ?? {}) as Record<string, unknown>;
+
+  const businessName = str(b.businessName, 120);
+  if (!businessName) {
+    return { error: "Your business name is required — it goes on every quote and invoice." };
+  }
+
+  // Optional, but if they typed something it has to be an address that works:
+  // silently keeping a malformed one would put a dead reply-to on paperwork.
+  const contactEmail = optStr(b.contactEmail, 254);
+  if (contactEmail && !EMAIL_RE.test(contactEmail)) {
+    return { error: "That contact email doesn't look right. Check it, or leave it blank." };
+  }
+
+  const taxPct = Math.max(0, Math.min(100, optNum(b.defaultTaxPct)));
+  const termsRaw = optNum(b.defaultPaymentTermsDays);
+  const termsDays = Math.max(0, Math.min(365, Math.round(termsRaw)));
+
+  return {
+    value: {
+      businessName,
+      trade: optStr(b.trade, 80),
+      phone: optStr(b.phone, 40),
+      contactEmail,
+      address: optStr(b.address, 300),
+      website: optStr(b.website, 200),
+      licenseNumber: optStr(b.licenseNumber, 60),
+      defaultTaxPct: taxPct,
+      defaultPaymentTermsDays: termsDays,
+      defaultQuoteNotes: optStr(b.defaultQuoteNotes, 2000),
     },
   };
 }

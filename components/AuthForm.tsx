@@ -100,9 +100,19 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
         />
       </div>
       <div>
-        <label htmlFor="auth-password" className="label-dark">
-          Password
-        </label>
+        <div className="flex items-baseline justify-between gap-3">
+          <label htmlFor="auth-password" className="label-dark">
+            Password
+          </label>
+          {!isSignup && (
+            <Link
+              href="/forgot"
+              className="mb-1.5 text-[13px] font-bold text-safety-300 underline-offset-4 hover:underline"
+            >
+              Forgot it?
+            </Link>
+          )}
+        </div>
         <input
           id="auth-password"
           type="password"

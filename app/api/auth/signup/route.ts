@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSession, hashPassword } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createUser, findUserByEmail } from "@/lib/store";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 /**
  * POST /api/auth/signup — create an account (email + password + business profile).
@@ -13,6 +14,11 @@ import { createUser, findUserByEmail } from "@/lib/store";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
+  const limit = await rateLimit(`signup:ip:${clientIp(req)}`, 5, 3600);
+  if (!limit.allowed) {
+    return tooManyRequests(limit, "Too many accounts created from here. Try again later.");
+  }
+
   if (!isDatabaseConfigured()) {
     return NextResponse.json(
       {

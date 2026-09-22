@@ -8,6 +8,8 @@ import { computeTotals, formatUSD, type LineItem } from "@/lib/money";
 import type { Customer, Invoice, InvoiceStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
 import { IconDownload } from "./icons";
+import { useConfirm } from "./ConfirmDialog";
+import { useToast } from "./Toast";
 
 const STATUSES: { value: InvoiceStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
@@ -31,6 +33,8 @@ export default function InvoiceEditor({
   seeded: Partial<Invoice> | null;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const base = initial ?? seeded;
   const [title, setTitle] = useState(base?.title ?? "");
   const [customerId, setCustomerId] = useState<string>(
@@ -107,6 +111,7 @@ export default function InvoiceEditor({
         setError(data.error || "Couldn't save the invoice.");
         return;
       }
+      toast(isNew ? "Invoice saved." : "Changes saved.");
       router.push(`/dashboard/invoices/${data.invoice.id}`);
       router.refresh();
     } catch {
@@ -117,7 +122,14 @@ export default function InvoiceEditor({
   }
 
   async function remove() {
-    if (!initial || !confirm("Delete this invoice? This can't be undone.")) return;
+    if (!initial) return;
+    const ok = await confirm({
+      title: "Delete this invoice?",
+      body: "This can't be undone. If the work was done, you'll have no record of billing for it.",
+      confirmLabel: "Delete invoice",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/invoices/${initial.id}`, { method: "DELETE" });

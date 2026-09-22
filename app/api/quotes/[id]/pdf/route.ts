@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/require-user";
-import { getBusinessProfile, getQuote } from "@/lib/store";
+import { getPublicBusinessInfo, getQuote } from "@/lib/store";
 import { buildDocumentPdf, pdfResponse, safeFilename } from "@/lib/pdf";
 import { badRequest } from "@/lib/validate";
 
@@ -33,7 +33,7 @@ export async function GET(
   try {
     const [quote, biz] = await Promise.all([
       getQuote(auth.user.id, id),
-      getBusinessProfile(auth.user.id),
+      getPublicBusinessInfo(auth.user.id),
     ]);
     if (!quote) {
       return NextResponse.json({ error: "Quote not found." }, { status: 404 });
@@ -47,12 +47,7 @@ export async function GET(
     }
 
     const pdf = await buildDocumentPdf(
-      {
-        businessName: biz.businessName,
-        trade: biz.trade,
-        phone: biz.phone,
-        email: biz.email,
-      },
+      biz,
       {
         kind: "quote",
         number: `Q-${quote.id}`,
