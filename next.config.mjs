@@ -33,6 +33,11 @@ const securityHeaders = [
 
 const nextConfig = {
   poweredByHeader: false,
+  // The migrate route reads lib/schema.sql at runtime; without this it is
+  // not traced into the serverless bundle and the read fails in production.
+  outputFileTracingIncludes: {
+    "/api/admin/migrate": ["./lib/schema.sql"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
