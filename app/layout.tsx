@@ -88,6 +88,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/#faq" className="transition hover:text-paper">
                 FAQ
               </Link>
+              <Link href="/tools" className="transition hover:text-paper">
+                Free tools
+              </Link>
             </div>
             <AuthNav />
           </nav>
@@ -117,6 +120,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <li>
                   <Link href="/signup" className="inline-block min-h-[32px] py-1 transition hover:text-paper">
                     Get started
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/tools" className="inline-block min-h-[32px] py-1 transition hover:text-paper">
+                    Free tools
                   </Link>
                 </li>
                 <li>

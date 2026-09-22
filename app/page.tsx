@@ -333,6 +333,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FREE TOOLS */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+        <div className="text-center">
+          <span className="kicker">Free forever · No signup</span>
+          <h2 className="mx-auto mt-4 max-w-2xl font-display text-4xl uppercase tracking-wide text-paper md:text-5xl">
+            Free calculators for the trades
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-bone-300">
+            The math you do on the job, done right and done fast. Conduit bends,
+            BTU sizing, water heaters, concrete, your hourly rate — every one
+            free, every one showing its working.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { href: "/tools/electrical/conduit-bending-calculator", name: "Conduit bending", blurb: "Offset marks, multipliers & 90° stub take-up" },
+            { href: "/tools/hvac/btu-calculator", name: "BTU calculator", blurb: "What size AC do you need?" },
+            { href: "/tools/plumbing/water-heater-sizing-calculator", name: "Water heater sizing", blurb: "Tank gallons or tankless GPM" },
+            { href: "/tools/general/concrete-calculator", name: "Concrete calculator", blurb: "Yards to order or bags to buy" },
+            { href: "/tools/business/hourly-rate-calculator", name: "Hourly rate calculator", blurb: "The rate your business actually needs" },
+            { href: "/tools", name: "View all tools", blurb: "The full free collection →" },
+          ].map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="card group p-5 transition hover:border-safety-500/40"
+            >
+              <h3 className="font-display text-lg uppercase tracking-wide text-paper transition group-hover:text-safety-300">
+                {t.name}
+              </h3>
+              <p className="mt-1.5 text-sm text-bone-400">{t.blurb}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-4 py-16 sm:px-6 md:py-20">
         <div className="text-center">
