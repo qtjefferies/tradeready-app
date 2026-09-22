@@ -64,11 +64,23 @@ export async function POST(req: NextRequest) {
      * Split on semicolons that end a line. The schema is plain DDL with no
      * functions or dollar-quoted bodies, so this is sufficient — and it has
      * to be split at all because the driver sends one statement per call.
+     *
+     * Comment lines are stripped from inside each chunk, not used to reject
+     * it. Every CREATE TABLE here is preceded by an explanatory comment, so
+     * discarding any chunk that merely STARTS with `--` threw away every
+     * table and left only the indexes, which then failed against tables that
+     * had never been created.
      */
     const statements = text
       .split(/;\s*$/m)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !/^--/.test(s.replace(/\n/g, " ").trim()));
+      .map((chunk) =>
+        chunk
+          .split("\n")
+          .filter((line) => !/^\s*--/.test(line))
+          .join("\n")
+          .trim()
+      )
+      .filter((chunk) => chunk.length > 0);
 
     let applied = 0;
     const failures: string[] = [];
