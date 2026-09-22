@@ -47,6 +47,17 @@ export const TOOLS: FreeTool[] = [
     teaser: "The smallest wire that keeps drop under 3%",
   },
   {
+    href: "/tools/electrical/wire-ampacity-calculator",
+    name: "Wire ampacity calculator",
+    short: "Wire ampacity",
+    trade: "electrical",
+    tag: "NEC 310.16",
+    answers: "How many amps can this wire carry?",
+    blurb:
+      "Table 310.16 ampacity for copper and aluminum, corrected for ambient temperature and conduit fill, capped by the terminal rating, with the biggest breaker you can legally use — or enter the load and get the wire.",
+    teaser: "12 AWG in a 105°F attic with six conductors is 20.9 A",
+  },
+  {
     href: "/tools/electrical/ohms-law-calculator",
     name: "Ohm's law calculator",
     short: "Ohm's law",
