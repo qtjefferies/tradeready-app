@@ -13,7 +13,7 @@ export default async function InvoicesPage() {
   const invoices = await store.listInvoices(user.id);
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">Invoices</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">Invoices</h2>
       <InvoicesClient invoices={invoices} />
     </div>
   );

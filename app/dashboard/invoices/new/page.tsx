@@ -33,7 +33,7 @@ export default async function NewInvoicePage({
     : null;
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">New invoice</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">New invoice</h2>
       <InvoiceEditor initial={null} customers={customers} seeded={seeded} />
     </div>
   );

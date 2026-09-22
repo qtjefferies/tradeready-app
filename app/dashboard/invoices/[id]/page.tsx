@@ -20,7 +20,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
   if (!invoice) notFound();
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">
         Invoice #{invoice.id} — {invoice.title}
       </h2>
       <InvoiceEditor initial={invoice} customers={customers} seeded={null} />

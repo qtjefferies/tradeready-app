@@ -32,21 +32,26 @@ export default function AuthNav() {
   }
 
   if (state === "loading") {
-    return <div className="h-9 w-24 animate-pulse rounded-xl bg-white/10" />;
+    return (
+      <div
+        className="h-11 w-28 animate-pulse rounded-xl bg-ink-700"
+        aria-label="Loading"
+      />
+    );
   }
 
   if (state === "in") {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Link
           href="/dashboard"
-          className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90"
+          className="btn-primary !min-h-[44px] !px-5 !py-2 !text-sm"
         >
           Dashboard
         </Link>
         <button
           onClick={logout}
-          className="text-sm text-slate-400 transition hover:text-white"
+          className="min-h-[44px] touch-manipulation rounded-xl px-3 text-sm font-bold text-bone-400 transition hover:text-paper active:scale-[0.97]"
         >
           Log out
         </button>
@@ -55,13 +60,16 @@ export default function AuthNav() {
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <Link href="/login" className="text-sm text-slate-300 transition hover:text-white">
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Link
+        href="/login"
+        className="hidden min-h-[44px] touch-manipulation items-center rounded-xl px-4 text-sm font-bold text-bone-300 transition hover:text-paper active:scale-[0.97] sm:inline-flex"
+      >
         Log in
       </Link>
       <Link
         href="/signup"
-        className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90"
+        className="btn-primary !min-h-[44px] !px-5 !py-2 !text-sm"
       >
         Get started
       </Link>

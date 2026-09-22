@@ -13,7 +13,7 @@ export default async function NewQuotePage() {
   const customers = await store.listCustomers(user.id);
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">New quote</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">New quote</h2>
       <QuoteEditor initial={null} customers={customers} trade={user.trade} />
     </div>
   );

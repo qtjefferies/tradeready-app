@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Customer, Job, JobStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
+import { IconPlus, IconSchedule } from "./icons";
 
 const STATUSES: { value: JobStatus; label: string }[] = [
   { value: "scheduled", label: "Scheduled" },
@@ -150,21 +151,21 @@ export default function ScheduleClient({
       <div className="mb-6 flex justify-end">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="btn-primary !py-2.5 text-sm"
+          className={showForm ? "btn-secondary !min-h-[48px] text-base" : "btn-primary !min-h-[48px] text-base"}
         >
-          {showForm ? "Cancel" : "+ Schedule a job"}
+          {showForm ? "Cancel" : (<><IconPlus className="h-5 w-5" /> Schedule a job</>)}
         </button>
       </div>
 
       {error && (
-        <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+        <p role="alert" className="mb-4 rounded-xl border-2 border-alert-400/40 bg-alert-400/10 px-4 py-3 text-[15px] font-semibold text-alert-300">
           {error}
         </p>
       )}
 
       {showForm && (
-        <div className="card mb-8 p-6">
-          <h3 className="mb-4 font-display text-base font-bold text-white">New job</h3>
+        <div className="card mb-8 p-5 sm:p-7">
+          <h3 className="mb-5 font-display text-xl uppercase tracking-wide text-paper">New job</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label htmlFor="j-title" className="label-dark">Job title</label>
@@ -238,16 +239,19 @@ export default function ScheduleClient({
               />
             </div>
           </div>
-          <button onClick={create} disabled={saving} className="btn-primary mt-4 text-sm">
+          <button onClick={create} disabled={saving} className="btn-primary mt-5 w-full text-base sm:w-auto">
             {saving ? "Scheduling…" : "Schedule job"}
           </button>
         </div>
       )}
 
       {grouped.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-display text-lg font-bold text-white">Nothing on the schedule.</p>
-          <p className="mt-2 text-sm text-slate-400">
+        <div className="empty-state">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-safety-500/15 text-safety-300">
+            <IconSchedule className="h-8 w-8" />
+          </span>
+          <p className="mt-5 font-display text-2xl uppercase tracking-wide text-paper">Nothing on the schedule.</p>
+          <p className="mx-auto mt-2 max-w-sm text-[15px] text-bone-300">
             Schedule your jobs here and they&apos;ll show up in your morning briefing.
           </p>
         </div>
@@ -255,21 +259,23 @@ export default function ScheduleClient({
         <div className="space-y-8">
           {grouped.map(([day, dayJobs]) => (
             <section key={day}>
-              <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-widest text-slate-400">
+              <h3 className="mb-3 flex items-center gap-3 font-display text-lg uppercase tracking-[0.14em] text-paper">
+                <span className="hazard inline-block h-3 w-8 rounded-sm" aria-hidden="true" />
                 {dayLabel(day)}
+                <span className="text-sm text-bone-500">({dayJobs.length})</span>
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {dayJobs.map((j) => (
                   <li
                     key={j.id}
-                    className="card flex flex-wrap items-center justify-between gap-3 p-4"
+                    className="card flex min-h-[76px] flex-wrap items-center justify-between gap-3 p-4 sm:p-5"
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={j.status} />
-                        <p className="truncate text-sm font-semibold text-white">{j.title}</p>
+                        <p className="truncate text-[15px] font-bold text-paper">{j.title}</p>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-sm text-bone-400">
                         {j.customer_name}
                         {j.scheduled_at &&
                           ` · ${new Date(j.scheduled_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`}
@@ -278,20 +284,20 @@ export default function ScheduleClient({
                             {" · "}
                             <Link
                               href={`/dashboard/customers/${j.customer_id}`}
-                              className="text-amber-300 hover:text-amber-200"
+                              className="font-bold text-safety-300 hover:text-safety-200"
                             >
                               customer record
                             </Link>
                           </>
                         )}
                       </p>
-                      {j.notes && <p className="mt-1 text-xs text-slate-400">{j.notes}</p>}
+                      {j.notes && <p className="mt-1 text-sm text-bone-300">{j.notes}</p>}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <select
                         value={j.status}
                         onChange={(e) => setStatus(j, e.target.value as JobStatus)}
-                        className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white outline-none focus:border-amber-400/60"
+                        className="input-dark min-h-[48px] !w-auto !px-3 !text-sm"
                         aria-label={`Status for ${j.title}`}
                       >
                         {STATUSES.map((s) => (
@@ -302,7 +308,7 @@ export default function ScheduleClient({
                       </select>
                       <button
                         onClick={() => remove(j)}
-                        className="rounded-lg px-2 py-1 text-xs text-slate-500 transition hover:bg-red-500/10 hover:text-red-300"
+                        className="flex min-h-[48px] touch-manipulation items-center rounded-lg px-3 text-sm font-bold text-bone-500 transition hover:bg-alert-400/10 hover:text-alert-300 active:scale-95"
                       >
                         Remove
                       </button>

@@ -7,6 +7,7 @@ import LineItemsEditor from "./LineItemsEditor";
 import { computeTotals, formatUSD, type LineItem } from "@/lib/money";
 import type { Customer, Quote, QuoteStatus } from "@/lib/store";
 import { StatusBadge } from "./Badges";
+import { IconDownload } from "./icons";
 
 const STATUSES: { value: QuoteStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
@@ -171,22 +172,22 @@ export default function QuoteEditor({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
-      <div className="card p-6">
+    <div className="grid gap-6 lg:grid-cols-[1fr_340px] lg:gap-8">
+      <div className="card p-5 sm:p-7">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-white">
+          <h2 className="font-display text-2xl uppercase tracking-wide text-paper">
             {isNew ? "New quote" : `Quote Q-${initial!.id}`}
           </h2>
           {!isNew && <StatusBadge status={initial!.status} />}
         </div>
 
         {error && (
-          <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+          <p role="alert" className="mb-5 rounded-xl border-2 border-alert-400/40 bg-alert-400/10 px-4 py-3 text-[15px] font-semibold text-alert-300">
             {error}
           </p>
         )}
 
-        <div className="mb-4">
+        <div className="mb-5">
           <label htmlFor="q-title" className="label-dark">Job title</label>
           <input
             id="q-title"
@@ -198,7 +199,7 @@ export default function QuoteEditor({
           />
         </div>
 
-        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        <div className="mb-5 grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="q-customer" className="label-dark">Customer</label>
             <select
@@ -234,16 +235,17 @@ export default function QuoteEditor({
           </div>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-6">
           <button
             type="button"
             onClick={() => setAssistOpen((v) => !v)}
-            className="btn-secondary w-full !py-2.5 text-sm"
+            aria-expanded={assistOpen}
+            className="btn-primary w-full text-base"
           >
-            {assistOpen ? "Hide AI assist" : "✨ Describe the job — AI drafts the line items"}
+            {assistOpen ? "Hide AI assist" : "✨ Describe the job — AI drafts the lines"}
           </button>
           {assistOpen && (
-            <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/5 p-4">
+            <div className="mt-3 rounded-xl border-2 border-safety-500/40 bg-safety-500/[0.07] p-4 sm:p-5">
               <label htmlFor="q-assist" className="label-dark">
                 Describe the job in plain words
               </label>
@@ -256,24 +258,24 @@ export default function QuoteEditor({
                 className="input-dark"
               />
               {assistError && (
-                <p role="alert" className="mt-2 text-sm text-red-300">{assistError}</p>
+                <p role="alert" className="mt-2 text-[15px] font-semibold text-alert-300">{assistError}</p>
               )}
               <button
                 type="button"
                 onClick={runAssist}
                 disabled={assistLoading}
-                className="btn-primary mt-3 !py-2.5 text-sm"
+                className="btn-primary mt-3 w-full text-base sm:w-auto"
               >
                 {assistLoading ? "Drafting line items…" : "Draft line items"}
               </button>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2.5 text-sm text-bone-400">
                 AI prices from typical US market rates — always review and adjust
                 before sending. Nothing is saved until you save the quote.
               </p>
             </div>
           )}
           {assumptions && (
-            <p className="mt-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-400">
+            <p className="mt-3 rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-sm text-bone-300">
               AI assumption: {assumptions}
             </p>
           )}
@@ -281,7 +283,7 @@ export default function QuoteEditor({
 
         <LineItemsEditor initial={initial?.line_items ?? []} onChange={setLineItems} />
 
-        <div className="mb-4 grid gap-4 sm:grid-cols-3">
+        <div className="mb-5 grid gap-4 sm:grid-cols-3">
           <div>
             <label htmlFor="q-tax" className="label-dark">Tax %</label>
             <input
@@ -319,7 +321,7 @@ export default function QuoteEditor({
           </div>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-2">
           <label htmlFor="q-notes" className="label-dark">Notes (shown on the PDF)</label>
           <textarea
             id="q-notes"
@@ -331,74 +333,84 @@ export default function QuoteEditor({
           />
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button onClick={() => save()} disabled={saving} className="btn-primary text-sm">
-            {saving ? "Saving…" : isNew ? "Save quote" : "Save changes"}
-          </button>
-          {(status === "draft" || isNew) && (
-            <button
-              onClick={() => save("sent")}
-              disabled={saving}
-              className="btn-secondary text-sm"
-            >
-              Save & mark sent
-            </button>
-          )}
-          {!isNew && (
-            <Link href={`/api/quotes/${initial!.id}/pdf`} className="btn-secondary text-sm">
-              Download PDF
-            </Link>
-          )}
-          {!isNew && (
-            <button onClick={remove} disabled={deleting} className="btn-danger">
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
-          )}
+        <div className="sticky-actions mt-6">
+          <div className="flex flex-col gap-3">
+            <p className="flex items-baseline justify-between gap-2 md:hidden">
+              <span className="stat-label">Quote total</span>
+              <span className="font-display text-3xl tracking-wide text-safety-300">
+                {formatUSD(totals.total)}
+              </span>
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button onClick={() => save()} disabled={saving} className="btn-primary w-full text-base sm:w-auto">
+                {saving ? "Saving…" : isNew ? "Save quote" : "Save changes"}
+              </button>
+              {(status === "draft" || isNew) && (
+                <button
+                  onClick={() => save("sent")}
+                  disabled={saving}
+                  className="btn-secondary w-full text-base sm:w-auto"
+                >
+                  Save & mark sent
+                </button>
+              )}
+              {!isNew && (
+                <Link href={`/api/quotes/${initial!.id}/pdf`} className="btn-secondary w-full text-base sm:w-auto">
+                  <IconDownload className="h-4 w-4" /> PDF
+                </Link>
+              )}
+              {!isNew && (
+                <button onClick={remove} disabled={deleting} className="btn-danger sm:ml-auto">
+                  {deleting ? "Deleting…" : "Delete"}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <aside className="card h-fit p-6 lg:sticky lg:top-24">
-        <h3 className="font-display text-base font-bold text-white">Totals</h3>
-        <dl className="mt-4 space-y-2 text-sm">
+      <aside className="card h-fit p-5 sm:p-6 lg:sticky lg:top-24">
+        <h3 className="font-display text-xl uppercase tracking-wide text-paper">Totals</h3>
+        <dl className="mt-4 space-y-2.5 text-[15px]">
           <div className="flex justify-between">
-            <dt className="text-slate-400">Labor</dt>
-            <dd className="text-slate-200">{formatUSD(totals.laborTotal)}</dd>
+            <dt className="text-bone-400">Labor</dt>
+            <dd className="font-semibold text-bone-200">{formatUSD(totals.laborTotal)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-400">Materials</dt>
-            <dd className="text-slate-200">{formatUSD(totals.materialsTotal)}</dd>
+            <dt className="text-bone-400">Materials</dt>
+            <dd className="font-semibold text-bone-200">{formatUSD(totals.materialsTotal)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-400">Subtotal</dt>
-            <dd className="text-slate-200">{formatUSD(totals.subtotal)}</dd>
+            <dt className="text-bone-400">Subtotal</dt>
+            <dd className="font-semibold text-bone-200">{formatUSD(totals.subtotal)}</dd>
           </div>
           {totals.discount > 0 && (
             <div className="flex justify-between">
-              <dt className="text-slate-400">Discount</dt>
-              <dd className="text-slate-200">−{formatUSD(totals.discount)}</dd>
+              <dt className="text-bone-400">Discount</dt>
+              <dd className="font-semibold text-bone-200">−{formatUSD(totals.discount)}</dd>
             </div>
           )}
           {totals.tax > 0 && (
             <div className="flex justify-between">
-              <dt className="text-slate-400">Tax ({taxPct}%)</dt>
-              <dd className="text-slate-200">{formatUSD(totals.tax)}</dd>
+              <dt className="text-bone-400">Tax ({taxPct}%)</dt>
+              <dd className="font-semibold text-bone-200">{formatUSD(totals.tax)}</dd>
             </div>
           )}
-          <div className="flex justify-between border-t border-white/10 pt-3 text-base">
-            <dt className="font-semibold text-white">Total</dt>
-            <dd className="font-display font-bold text-amber-300">{formatUSD(totals.total)}</dd>
+          <div className="flex items-baseline justify-between border-t-2 border-ink-600 pt-4">
+            <dt className="font-bold text-paper">Total</dt>
+            <dd className="font-display text-4xl tracking-wide text-safety-300">{formatUSD(totals.total)}</dd>
           </div>
         </dl>
 
         {!isNew && (
-          <div className="mt-6 border-t border-white/10 pt-4">
+          <div className="mt-6 border-t-2 border-ink-600 pt-5">
             <label htmlFor="q-status" className="label-dark">Status</label>
             <div className="flex gap-2">
               <select
                 id="q-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as QuoteStatus)}
-                className="input-dark flex-1"
+                className="input-dark min-h-[48px] flex-1"
               >
                 {STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -409,7 +421,7 @@ export default function QuoteEditor({
               <button
                 onClick={() => save()}
                 disabled={saving}
-                className="btn-secondary shrink-0 !px-4 text-sm"
+                className="btn-secondary min-h-[48px] shrink-0 !px-5 text-sm"
               >
                 Apply
               </button>
@@ -417,7 +429,7 @@ export default function QuoteEditor({
             {initial!.status === "accepted" && (
               <Link
                 href={`/dashboard/invoices/new?fromQuote=${initial!.id}`}
-                className="btn-primary mt-4 w-full text-sm"
+                className="btn-primary mt-4 w-full text-base"
               >
                 Create invoice from this quote
               </Link>

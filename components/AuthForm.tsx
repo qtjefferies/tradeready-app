@@ -173,13 +173,13 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
       {phase === "error" && error && (
         <p
           role="alert"
-          className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200"
+          className="rounded-xl border-2 border-alert-400/40 bg-alert-400/10 px-4 py-3 text-[15px] font-semibold text-alert-300"
         >
           {error}
         </p>
       )}
 
-      <button type="submit" disabled={phase === "loading"} className="btn-primary w-full">
+      <button type="submit" disabled={phase === "loading"} className="btn-primary w-full text-base">
         {phase === "loading"
           ? isSignup
             ? "Creating your account…"

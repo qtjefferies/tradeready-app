@@ -6,6 +6,7 @@ import MessageModal from "./MessageModal";
 import { computeTotals, formatUSD } from "@/lib/money";
 import type { Invoice, InvoiceStatus } from "@/lib/store";
 import { ItemSummary, StatusBadge } from "./Badges";
+import { IconDollar, IconInvoice, IconPlus } from "./icons";
 
 const FILTERS: { value: InvoiceStatus | "all" | "attention"; label: string }[] = [
   { value: "all", label: "All" },
@@ -16,6 +17,15 @@ const FILTERS: { value: InvoiceStatus | "all" | "attention"; label: string }[] =
   { value: "paid", label: "Paid" },
   { value: "draft", label: "Draft" },
 ];
+
+/** Rail color per invoice status. */
+const RAIL: Record<string, string> = {
+  draft: "bg-bone-500",
+  unpaid: "bg-safety-400",
+  sent: "bg-info-400",
+  overdue: "bg-alert-400",
+  paid: "bg-money-400",
+};
 
 /**
  * InvoicesClient — invoice list with a payment-reminder queue.
@@ -42,6 +52,10 @@ export default function InvoicesClient({ invoices }: { invoices: Invoice[] }) {
   });
 
   const attentionCount = invoices.filter(needsAttention).length;
+  const unpaidTotal = invoices
+    .filter((i) => i.status !== "paid" && i.status !== "draft")
+    .reduce((s, i) => s + computeTotals(i.line_items, i.tax_pct, i.discount).total, 0);
+  const unpaidCount = invoices.filter((i) => i.status !== "paid" && i.status !== "draft").length;
 
   async function draftReminder(inv: Invoice) {
     setDraftingId(inv.id);
@@ -92,42 +106,62 @@ export default function InvoicesClient({ invoices }: { invoices: Invoice[] }) {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="filter-rail" role="tablist" aria-label="Filter invoices">
           {FILTERS.map((f) => (
             <button
               key={f.value}
+              role="tab"
+              aria-selected={filter === f.value}
               onClick={() => setFilter(f.value)}
-              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
-                filter === f.value
-                  ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
-                  : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-              }`}
+              className={`filter-pill ${filter === f.value ? "filter-pill-active" : ""}`}
             >
               {f.label}
               {f.value === "attention" && attentionCount > 0 && (
-                <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-xs">{attentionCount}</span>
+                <span className="rounded-full bg-alert-400 px-2 py-0.5 text-xs font-extrabold text-ink-950">
+                  {attentionCount}
+                </span>
               )}
             </button>
           ))}
         </div>
-        <Link href="/dashboard/invoices/new" className="btn-primary !py-2.5 text-sm">
-          + New invoice
+        <Link href="/dashboard/invoices/new" className="btn-primary shrink-0 !min-h-[48px] !text-sm">
+          <IconPlus className="h-4 w-4" /> New invoice
         </Link>
       </div>
 
+      {unpaidCount > 0 && (
+        <div className="well mb-6 flex items-center justify-between gap-4 p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-safety-500/15 text-safety-300">
+              <IconDollar className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="stat-label">Outstanding</p>
+              <p className="stat-number !text-3xl">{formatUSD(unpaidTotal)}</p>
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-bone-400">
+            across {unpaidCount} invoice{unpaidCount === 1 ? "" : "s"}
+          </p>
+        </div>
+      )}
+
       {draftError && (
-        <p role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+        <p role="alert" className="mb-4 rounded-xl border-2 border-alert-400/40 bg-alert-400/10 px-4 py-3 text-[15px] font-semibold text-alert-300">
           {draftError}
         </p>
       )}
 
       {visible.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="font-display text-lg font-bold text-white">
+        <div className="empty-state">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-safety-500/15 text-safety-300">
+            <IconInvoice className="h-8 w-8" />
+          </span>
+          <p className="mt-5 font-display text-2xl uppercase tracking-wide text-paper">
             {filter === "attention" ? "Nobody owes you money. Beautiful." : "No invoices yet."}
           </p>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mx-auto mt-2 max-w-sm text-[15px] text-bone-300">
             {filter === "attention"
               ? "Overdue invoices will show up here with a one-tap reminder draft."
               : "Create one from an accepted quote in a single click — or start fresh."}
@@ -149,38 +183,45 @@ export default function InvoicesClient({ invoices }: { invoices: Invoice[] }) {
             return (
               <li key={inv.id}>
                 <div
-                  className={`card flex flex-wrap items-center justify-between gap-4 p-5 transition hover:border-amber-400/40 ${
-                    attention ? "border-red-400/40" : ""
+                  className={`card relative flex min-h-[88px] flex-wrap items-center justify-between gap-4 overflow-hidden p-4 transition active:scale-[0.995] sm:p-5 ${
+                    attention ? "!border-alert-400/60" : "hover:border-bone-500/50"
                   }`}
                 >
-                  <Link href={`/dashboard/invoices/${inv.id}`} className="min-w-0 flex-1">
+                  <span
+                    className={`absolute inset-y-0 left-0 w-1.5 ${RAIL[inv.status] ?? "bg-bone-500"}`}
+                    aria-hidden="true"
+                  />
+                  <Link
+                    href={`/dashboard/invoices/${inv.id}`}
+                    className="min-w-0 flex-1 touch-manipulation pl-2"
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={inv.status} />
                       {attention && (
-                        <span className="badge bg-red-500/20 text-red-300">
+                        <span className="badge border-alert-400/50 bg-alert-400/20 text-alert-300">
                           {daysOverdue > 0 ? `${daysOverdue}d overdue` : "past due"}
                         </span>
                       )}
-                      <p className="truncate text-sm font-semibold text-white">
-                        INV-{inv.id} · {inv.title}
-                      </p>
                     </div>
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-1.5 truncate text-[15px] font-bold text-paper">
+                      INV-{inv.id} · {inv.title}
+                    </p>
+                    <p className="mt-0.5 text-sm text-bone-400">
                       {inv.customer_name || "No customer"}
                       {inv.due_at && (
-                        <span className="text-slate-500">
+                        <span className="text-bone-500">
                           {" "}· due {new Date(inv.due_at + "T12:00:00").toLocaleDateString()}
                         </span>
                       )}
                     </p>
                     <ItemSummary items={inv.line_items} total={totals.total} />
                   </Link>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2 pl-2">
                     {attention && (
                       <button
                         onClick={() => draftReminder(inv)}
                         disabled={draftingId === inv.id}
-                        className="btn-secondary !px-4 !py-2 text-xs"
+                        className="btn-secondary !min-h-[48px] !px-4 !py-2 !text-sm"
                       >
                         {draftingId === inv.id ? "Drafting…" : "✨ Draft reminder"}
                       </button>
@@ -188,14 +229,15 @@ export default function InvoicesClient({ invoices }: { invoices: Invoice[] }) {
                     {inv.status !== "paid" && inv.status !== "draft" && (
                       <button
                         onClick={() => markPaid(inv)}
-                        className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                        className="btn-success"
                       >
                         Mark paid
                       </button>
                     )}
                     <Link
                       href={`/dashboard/invoices/${inv.id}`}
-                      className="text-sm font-semibold text-amber-300 hover:text-amber-200"
+                      className="btn-ghost"
+                      aria-label={`Open invoice INV-${inv.id}`}
                     >
                       Open →
                     </Link>
@@ -206,21 +248,6 @@ export default function InvoicesClient({ invoices }: { invoices: Invoice[] }) {
           })}
         </ul>
       )}
-
-      <p className="mt-4 text-sm text-slate-500">
-        Unpaid total:{" "}
-        <span className="font-semibold text-slate-200">
-          {formatUSD(
-            invoices
-              .filter((i) => i.status !== "paid" && i.status !== "draft")
-              .reduce(
-                (s, i) => s + computeTotals(i.line_items, i.tax_pct, i.discount).total,
-                0
-              )
-          )}
-        </span>{" "}
-        outstanding across {invoices.filter((i) => i.status !== "paid" && i.status !== "draft").length} invoices.
-      </p>
 
       {modal && (
         <MessageModal

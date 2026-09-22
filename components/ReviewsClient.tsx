@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import MessageModal from "./MessageModal";
 import type { Customer, Job, Review } from "@/lib/store";
 import { StatusBadge } from "./Badges";
+import { IconReviews } from "./icons";
 
 /**
  * ReviewsClient — review request tracking.
@@ -127,20 +128,20 @@ export default function ReviewsClient({
   const received = reviews.filter((r) => r.status === "received");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {error && (
-        <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+        <p role="alert" className="rounded-xl border-2 border-alert-400/40 bg-alert-400/10 px-4 py-3 text-[15px] font-semibold text-alert-300">
           {error}
         </p>
       )}
 
-      <div className="card p-6">
-        <h3 className="font-display text-base font-bold text-white">Ask for a review</h3>
-        <p className="mt-1 text-sm text-slate-400">
+      <div className="card p-5 sm:p-7">
+        <h3 className="font-display text-xl uppercase tracking-wide text-paper">Ask for a review</h3>
+        <p className="mt-1.5 text-[15px] text-bone-300">
           Pick a happy customer — AI drafts the text, you copy it into your messages. The
           request gets logged so you know who you&apos;ve asked.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="r-customer" className="label-dark">Customer</label>
             <select
@@ -180,57 +181,57 @@ export default function ReviewsClient({
             </select>
           </div>
         </div>
-        <button onClick={draftRequest} disabled={drafting} className="btn-primary mt-4 text-sm">
+        <button onClick={draftRequest} disabled={drafting} className="btn-primary mt-5 w-full text-base sm:w-auto">
           {drafting ? "Drafting…" : "✨ Draft review request"}
         </button>
       </div>
 
       <section>
-        <h3 className="mb-3 font-display text-base font-bold text-white">
-          Waiting on reviews ({requested.length})
+        <h3 className="mb-4 font-display text-xl uppercase tracking-wide text-paper">
+          Waiting on reviews <span className="text-bone-400">({requested.length})</span>
         </h3>
         {requested.length === 0 ? (
-          <p className="card p-6 text-sm text-slate-500">
+          <p className="card p-6 text-[15px] text-bone-500">
             Nobody outstanding. Reviews are how the next job finds you — ask after every good one.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {requested.map((r) => (
-              <li key={r.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
+              <li key={r.id} className="card flex min-h-[72px] flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">
+                  <p className="truncate text-[15px] font-bold text-paper">
                     {r.customer_name}
                     {r.job_title ? ` — ${r.job_title}` : ""}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-sm text-bone-400">
                     Asked {new Date(r.requested_at).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     onClick={() => setRatingFor(ratingFor === r.id ? null : r.id)}
-                    className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                    className="btn-success"
                   >
                     Log received review
                   </button>
                   <button
                     onClick={() => remove(r)}
-                    className="rounded-lg px-2 py-1 text-xs text-slate-500 transition hover:bg-red-500/10 hover:text-red-300"
+                    className="flex min-h-[44px] touch-manipulation items-center rounded-lg px-3 text-sm font-bold text-bone-500 transition hover:bg-alert-400/10 hover:text-alert-300 active:scale-95"
                   >
                     Remove
                   </button>
                 </div>
                 {ratingFor === r.id && (
-                  <div className="w-full rounded-xl border border-white/10 bg-black/30 p-4">
+                  <div className="w-full rounded-xl border-2 border-ink-600 bg-ink-900 p-4">
                     <div className="flex items-center gap-3">
-                      <label htmlFor={`rating-${r.id}`} className="text-sm text-slate-300">
+                      <label htmlFor={`rating-${r.id}`} className="text-[15px] font-semibold text-bone-200">
                         Stars
                       </label>
                       <select
                         id={`rating-${r.id}`}
                         value={rating}
                         onChange={(e) => setRating(Number(e.target.value))}
-                        className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                        className="input-dark min-h-[48px] !w-auto"
                       >
                         {[5, 4, 3, 2, 1].map((n) => (
                           <option key={n} value={n}>
@@ -249,7 +250,7 @@ export default function ReviewsClient({
                     <button
                       onClick={() => saveRating(r)}
                       disabled={savingRating}
-                      className="btn-primary mt-3 !py-2 text-sm"
+                      className="btn-primary mt-3 w-full text-base sm:w-auto"
                     >
                       {savingRating ? "Saving…" : "Save review"}
                     </button>
@@ -262,27 +263,32 @@ export default function ReviewsClient({
       </section>
 
       <section>
-        <h3 className="mb-3 font-display text-base font-bold text-white">
-          Reviews received ({received.length})
+        <h3 className="mb-4 font-display text-xl uppercase tracking-wide text-paper">
+          Reviews received <span className="text-money-300">({received.length})</span>
         </h3>
         {received.length === 0 ? (
-          <p className="card p-6 text-sm text-slate-500">No reviews logged yet.</p>
+          <div className="empty-state !p-8">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-grape-400/15 text-grape-300">
+              <IconReviews className="h-7 w-7" />
+            </span>
+            <p className="mt-4 text-[15px] text-bone-500">No reviews logged yet.</p>
+          </div>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {received.map((r) => (
-              <li key={r.id} className="card p-4">
+              <li key={r.id} className="card p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-white">{r.customer_name}</p>
+                  <p className="text-[15px] font-bold text-paper">{r.customer_name}</p>
                   <StatusBadge status={r.status} />
                 </div>
                 {r.rating && (
-                  <p className="mt-1 text-amber-300">
+                  <p className="mt-1.5 text-xl text-safety-300" aria-label={`${r.rating} out of 5 stars`}>
                     {"★".repeat(r.rating)}
                     {"☆".repeat(5 - r.rating)}
                   </p>
                 )}
                 {r.review_text && (
-                  <p className="mt-2 text-sm italic text-slate-400">“{r.review_text}”</p>
+                  <p className="mt-2 text-[15px] italic leading-relaxed text-bone-300">“{r.review_text}”</p>
                 )}
               </li>
             ))}

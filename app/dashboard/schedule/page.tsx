@@ -16,7 +16,7 @@ export default async function SchedulePage() {
   ]);
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">Schedule</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">Schedule</h2>
       <ScheduleClient jobs={jobs} customers={customers} />
     </div>
   );

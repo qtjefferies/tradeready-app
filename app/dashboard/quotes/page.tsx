@@ -13,7 +13,7 @@ export default async function QuotesPage() {
   const quotes = await store.listQuotes(user.id);
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">Quotes</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">Quotes</h2>
       <QuotesClient quotes={quotes} />
     </div>
   );

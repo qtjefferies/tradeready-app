@@ -18,7 +18,7 @@ export default async function ReviewsPage() {
   const completeJobs = jobs.filter((j) => j.status === "complete");
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">Reviews</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">Reviews</h2>
       <ReviewsClient reviews={reviews} customers={customers} completeJobs={completeJobs} />
     </div>
   );

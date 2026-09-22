@@ -13,7 +13,7 @@ export default async function CustomersPage() {
   const customers = await store.listCustomers(user.id);
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">Customers</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">Customers</h2>
       <CustomersClient customers={customers} />
     </div>
   );

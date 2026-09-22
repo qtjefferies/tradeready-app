@@ -2,52 +2,159 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   TradeReady design system — rugged premium, workwear brand.
+   Dark charcoal surfaces · safety-amber accent · off-white text.
+   Mobile-first: 48px+ touch targets, 16px inputs (no iOS zoom),
+   high contrast for sunlight readability.
+   ============================================================ */
+
 :root {
   color-scheme: dark;
+  --tr-paper: #f3f0e8;
+  --tr-ink-950: #0a0b0d;
+  --tr-ink-900: #101216;
+  --tr-safety-400: #fbbf24;
+  --tr-safety-500: #f59e0b;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: #0a0c10;
-  color: #e8ecf4;
+  background-color: var(--tr-ink-950);
+  color: var(--tr-paper);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  /* Subtle charcoal texture — like a shop wall, not flat black */
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, rgba(251, 191, 36, 0.05), transparent 60%),
+    radial-gradient(900px 500px at 85% 110%, rgba(234, 88, 12, 0.04), transparent 60%);
+  background-attachment: fixed;
 }
 
 ::selection {
-  background: rgba(245, 158, 11, 0.4);
-  color: #fff;
+  background: rgba(245, 158, 11, 0.45);
+  color: #0a0b0d;
+}
+
+/* Native controls (date pickers, dropdowns) match the dark theme */
+select option {
+  background-color: var(--tr-ink-900);
+  color: var(--tr-paper);
+}
+
+/* Thin dark scrollbars for horizontal filter rails */
+.scroll-rail {
+  scrollbar-width: thin;
+  scrollbar-color: #39404d transparent;
+}
+.scroll-rail::-webkit-scrollbar {
+  height: 6px;
+}
+.scroll-rail::-webkit-scrollbar-thumb {
+  background: #39404d;
+  border-radius: 999px;
 }
 
 @layer components {
+  /* ---------- Surfaces ---------- */
   .card {
-    @apply rounded-2xl border border-white/10 bg-white/[0.03];
+    @apply rounded-2xl border border-white/[0.08] bg-gradient-to-b from-ink-800 to-ink-850 shadow-card-deep;
   }
-  .gradient-text {
-    @apply bg-gradient-to-r from-amber-300 via-orange-400 to-amber-500 bg-clip-text text-transparent;
+  .well {
+    @apply rounded-xl border border-ink-700 bg-ink-900;
   }
+
+  /* ---------- Brand marks ---------- */
+  /* Caution-tape stripe — use sparingly: logo, dividers, CTA edges */
+  .hazard {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--tr-safety-500) 0 10px,
+      var(--tr-ink-950) 10px 20px
+    );
+  }
+  .kicker {
+    @apply inline-flex items-center gap-2 font-display text-[13px] uppercase tracking-[0.22em] text-safety-400;
+  }
+  .kicker::before {
+    content: "";
+    @apply inline-block h-2.5 w-2.5;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--tr-safety-500) 0 2px,
+      var(--tr-ink-950) 2px 4px
+    );
+  }
+
+  /* ---------- Buttons (48px+ targets, glove-friendly) ---------- */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-3 font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[52px] touch-manipulation select-none items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-safety-400 to-safety-500 px-6 py-3 text-base font-extrabold text-ink-950 shadow-btn-hard transition-all duration-100 hover:brightness-110 active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0 disabled:active:shadow-btn-hard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-safety-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 py-3 font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[52px] touch-manipulation select-none items-center justify-center gap-2 rounded-xl border-2 border-ink-600 bg-ink-800 px-6 py-3 text-base font-bold text-paper transition-all duration-100 hover:border-bone-500 hover:bg-ink-700 active:translate-y-[2px] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-safety-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[44px] touch-manipulation select-none items-center justify-center gap-2 rounded-xl border-2 border-alert-400/30 bg-alert-400/10 px-4 py-2 text-sm font-bold text-alert-300 transition hover:bg-alert-400/20 active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alert-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950;
   }
+  .btn-ghost {
+    @apply inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-safety-300 transition hover:bg-safety-500/10 hover:text-safety-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-safety-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950;
+  }
+  .btn-success {
+    @apply inline-flex min-h-[44px] touch-manipulation select-none items-center justify-center gap-2 rounded-xl border-2 border-money-400/30 bg-money-400/10 px-4 py-2 text-sm font-bold text-money-300 transition hover:bg-money-400/20 active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950;
+  }
+
+  /* ---------- Forms ---------- */
   .input-dark {
-    @apply w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-amber-400/60 focus:ring-2 focus:ring-amber-500/20;
+    @apply min-h-[52px] w-full rounded-xl border-2 border-ink-600 bg-ink-900 px-4 text-base text-paper placeholder:text-bone-600 outline-none transition focus:border-safety-400 focus:ring-2 focus:ring-safety-500/25 disabled:opacity-60;
+  }
+  textarea.input-dark {
+    @apply min-h-0 py-3 leading-relaxed;
   }
   .label-dark {
-    @apply mb-1.5 block text-sm font-medium text-slate-300;
+    @apply mb-1.5 block text-[12px] font-bold uppercase tracking-[0.12em] text-bone-400;
   }
-  .section-label {
-    @apply mb-4 inline-block rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-amber-300;
-  }
+
+  /* ---------- Badges & status ---------- */
   .badge {
-    @apply inline-block rounded-md px-2 py-0.5 text-[11px] font-bold;
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide;
+  }
+
+  /* ---------- Type helpers ---------- */
+  .stat-number {
+    @apply font-display text-4xl leading-none text-paper;
+  }
+  .stat-label {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-bone-500;
+  }
+
+  /* ---------- List rows ---------- */
+  .row-card {
+    @apply card flex min-h-[72px] items-center gap-4 p-4 transition active:scale-[0.995] sm:p-5;
+  }
+
+  /* ---------- Filter pills (horizontally scrollable rail on mobile) ---------- */
+  .filter-rail {
+    @apply scroll-rail -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0;
+  }
+  .filter-pill {
+    @apply inline-flex min-h-[44px] shrink-0 touch-manipulation items-center gap-1.5 rounded-xl border-2 border-ink-600 bg-ink-800 px-4 text-sm font-bold text-bone-300 transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-safety-300;
+  }
+  .filter-pill-active {
+    @apply border-safety-500 bg-safety-500/15 text-safety-300;
+  }
+
+  /* ---------- Empty states ---------- */
+  .empty-state {
+    @apply card p-10 text-center sm:p-12;
+  }
+
+  /* ---------- Sticky mobile action bars (sit above the bottom tab bar) ---------- */
+  .sticky-actions {
+    @apply sticky bottom-[84px] z-30 -mx-4 border-t-2 border-ink-700 bg-ink-900/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:static md:z-auto md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none;
   }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatUSD, type LineItem, type LineItemKind } from "@/lib/money";
+import { IconPlus, IconX } from "./icons";
 
 /**
  * LineItemsEditor — shared labor/materials line-item editor for quotes and
@@ -64,85 +65,88 @@ export default function LineItemsEditor({
     kind: LineItemKind;
     rows: { item: LineItem; index: number }[];
   }) {
+    const subtotal = rows.reduce((s, r) => s + r.item.qty * r.item.unit_price, 0);
     return (
-      <div className="mb-5">
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            {label}
-          </h4>
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h4 className="stat-label !text-bone-300">{label}</h4>
           <button
             type="button"
             onClick={() => addRow(kind)}
-            className="text-xs font-semibold text-amber-300 hover:text-amber-200"
+            className="inline-flex min-h-[44px] touch-manipulation items-center gap-1.5 rounded-xl border-2 border-dashed border-ink-600 px-4 text-sm font-bold text-safety-300 transition hover:border-safety-500/60 hover:bg-safety-500/10 active:scale-[0.97]"
           >
-            + Add {label.toLowerCase()} line
+            <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()} line
           </button>
         </div>
         {rows.length === 0 && (
-          <p className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-xs text-slate-500">
+          <p className="rounded-xl border-2 border-dashed border-ink-700 px-4 py-4 text-sm text-bone-500">
             No {label.toLowerCase()} lines yet.
           </p>
         )}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {rows.map(({ item, index }) => (
             <div
               key={index}
-              className="grid grid-cols-[1fr_auto] gap-2 rounded-xl border border-white/10 bg-black/30 p-3 sm:grid-cols-[1fr_90px_110px_90px_auto] sm:items-center"
+              className="rounded-xl border-2 border-ink-600 bg-ink-900 p-3 transition focus-within:border-safety-500/60"
             >
-              <input
-                type="text"
-                value={item.description}
-                onChange={(e) => setField(index, "description", e.target.value)}
-                placeholder={
-                  kind === "labor" ? "e.g. Install labor — 3 hrs" : "e.g. 50-gal water heater"
-                }
-                className="input-dark col-span-2 !py-2 text-sm sm:col-span-1"
-              />
-              <input
-                type="number"
-                min={0}
-                step="any"
-                value={item.qty}
-                onChange={(e) => setField(index, "qty", e.target.value)}
-                aria-label="Quantity"
-                title="Qty"
-                className="input-dark !py-2 text-sm"
-              />
-              <input
-                type="number"
-                min={0}
-                step="any"
-                value={item.unit_price}
-                onChange={(e) => setField(index, "unit_price", e.target.value)}
-                aria-label="Unit price"
-                title="Unit price ($)"
-                placeholder="$ each"
-                className="input-dark !py-2 text-sm"
-              />
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-sm font-semibold text-slate-200">
-                  {formatUSD(item.qty * item.unit_price)}
-                </span>
+              <div className="flex items-start gap-2">
+                <input
+                  type="text"
+                  value={item.description}
+                  onChange={(e) => setField(index, "description", e.target.value)}
+                  placeholder={
+                    kind === "labor" ? "e.g. Install labor — 3 hrs" : "e.g. 50-gal water heater"
+                  }
+                  aria-label={`${label} description`}
+                  className="input-dark min-h-[48px] flex-1 border-0 !bg-transparent !px-1 text-[15px] font-semibold focus:!ring-0"
+                />
                 <button
                   type="button"
                   onClick={() => removeRow(index)}
                   aria-label="Remove line"
-                  className="rounded-lg px-2 py-1 text-slate-500 transition hover:bg-red-500/10 hover:text-red-300"
+                  className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-lg text-bone-500 transition hover:bg-alert-400/10 hover:text-alert-300 active:scale-95"
                 >
-                  ✕
+                  <IconX className="h-4 w-4" />
                 </button>
+              </div>
+              <div className="mt-1 grid grid-cols-3 items-center gap-2">
+                <div>
+                  <label className="sr-only" htmlFor={`qty-${index}`}>Quantity</label>
+                  <input
+                    id={`qty-${index}`}
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={item.qty}
+                    onChange={(e) => setField(index, "qty", e.target.value)}
+                    placeholder="Qty"
+                    className="input-dark min-h-[48px] !px-3 text-center"
+                  />
+                </div>
+                <div>
+                  <label className="sr-only" htmlFor={`price-${index}`}>Unit price</label>
+                  <input
+                    id={`price-${index}`}
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={item.unit_price}
+                    onChange={(e) => setField(index, "unit_price", e.target.value)}
+                    placeholder="$ each"
+                    className="input-dark min-h-[48px] !px-3 text-center"
+                  />
+                </div>
+                <p className="text-right font-display text-xl tracking-wide text-paper">
+                  {formatUSD(item.qty * item.unit_price)}
+                </p>
               </div>
             </div>
           ))}
         </div>
         {rows.length > 0 && (
-          <p className="mt-2 text-right text-xs text-slate-500">
+          <p className="mt-2.5 text-right text-sm text-bone-400">
             {label} subtotal:{" "}
-            <span className="font-semibold text-slate-300">
-              {formatUSD(
-                rows.reduce((s, r) => s + r.item.qty * r.item.unit_price, 0)
-              )}
-            </span>
+            <span className="font-bold text-bone-200">{formatUSD(subtotal)}</span>
           </p>
         )}
         <span className="hidden">

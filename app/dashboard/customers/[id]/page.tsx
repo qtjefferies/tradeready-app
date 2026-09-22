@@ -20,7 +20,7 @@ export default async function CustomerPage({ params }: { params: { id: string } 
   if (!customer || !history) notFound();
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">{customer.name}</h2>
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">{customer.name}</h2>
       <CustomerDetail customer={customer} history={history} />
     </div>
   );

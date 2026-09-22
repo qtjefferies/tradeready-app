@@ -20,7 +20,7 @@ export default async function QuotePage({ params }: { params: { id: string } }) 
   if (!quote) notFound();
   return (
     <div>
-      <h2 className="mb-6 font-display text-xl font-bold text-white">
+      <h2 className="mb-6 font-display text-2xl uppercase tracking-wide text-paper">
         Quote #{quote.id} — {quote.title}
       </h2>
       <QuoteEditor initial={quote} customers={customers} trade={user.trade} />
