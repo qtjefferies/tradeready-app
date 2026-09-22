@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Free Calculators for the Trades",
   description:
-    "Free trade calculators: conduit bending, BTU/AC sizing, water heater sizing, concrete, and contractor hourly rate. No signup, no paywall — from TradeReady.",
+    "Free trade calculators: voltage drop, BTU/AC sizing, water heater sizing, concrete, and contractor hourly rate. No signup, no paywall — from TradeReady.",
 };
 
 type Tool = { href: string; name: string; blurb: string; tag: string };
@@ -14,9 +14,9 @@ const GROUPS: { trade: string; tools: Tool[] }[] = [
     trade: "Electrical",
     tools: [
       {
-        href: "/tools/electrical/conduit-bending-calculator",
-        name: "Conduit bending calculator",
-        blurb: "Offset mark spacing, multipliers, and shrinkage for 10°–45° bends, plus 90° stub-up take-up.",
+        href: "/tools/electrical/voltage-drop-calculator",
+        name: "Voltage drop calculator",
+        blurb: "The smallest wire size that keeps the drop under 3% — copper or aluminum, any run length.",
         tag: "Most used",
       },
     ],

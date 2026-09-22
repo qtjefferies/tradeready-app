@@ -43,9 +43,9 @@ export default function Page() {
       ]}
       related={[
         {
-          href: "/tools/electrical/conduit-bending-calculator",
-          name: "Conduit bending",
-          blurb: "Offset mark spacing, multipliers, and 90° stub take-up.",
+          href: "/tools/electrical/voltage-drop-calculator",
+          name: "Voltage drop",
+          blurb: "Wire size for long runs — keep the drop under 3%.",
         },
         {
           href: "/tools/hvac/btu-calculator",

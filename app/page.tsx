@@ -348,7 +348,7 @@ export default function LandingPage() {
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { href: "/tools/electrical/conduit-bending-calculator", name: "Conduit bending", blurb: "Offset marks, multipliers & 90° stub take-up" },
+            { href: "/tools/electrical/voltage-drop-calculator", name: "Voltage drop", blurb: "Wire size for long runs — keep drop under 3%" },
             { href: "/tools/hvac/btu-calculator", name: "BTU calculator", blurb: "What size AC do you need?" },
             { href: "/tools/plumbing/water-heater-sizing-calculator", name: "Water heater sizing", blurb: "Tank gallons or tankless GPM" },
             { href: "/tools/general/concrete-calculator", name: "Concrete calculator", blurb: "Yards to order or bags to buy" },
