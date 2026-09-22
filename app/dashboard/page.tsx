@@ -4,6 +4,7 @@ import { requirePageUser as requireUser } from "@/lib/require-page-user";
 import * as store from "@/lib/store";
 import { moneyFoundSummary } from "@/lib/opportunities";
 import GettingStarted, { type SetupStep } from "@/components/GettingStarted";
+import ToolQuoteNudge from "@/components/ToolQuoteNudge";
 import { computeTotals, formatUSD } from "@/lib/money";
 import { StatusBadge } from "@/components/Badges";
 import {
@@ -233,6 +234,9 @@ export default async function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* A free-calculator payload waiting from before login — the keep-them loop. */}
+      <ToolQuoteNudge />
 
       {showSetup && (
         <div className="mt-6">

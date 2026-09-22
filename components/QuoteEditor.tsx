@@ -35,6 +35,16 @@ export interface QuoteDefaults {
   validDays: number;
 }
 
+/**
+ * Numbers carried over from a free calculator (/tools). Only used for a NEW
+ * quote — an existing quote keeps what it was saved with.
+ */
+export interface QuotePrefill {
+  title?: string;
+  notes?: string;
+  line_items?: LineItem[];
+}
+
 /** Today + n days as YYYY-MM-DD, read from local parts so no timezone drift. */
 function dateInDays(days: number): string {
   const d = new Date();
@@ -49,30 +59,33 @@ export default function QuoteEditor({
   customers,
   trade,
   defaults = null,
+  prefill = null,
 }: {
   initial: Quote | null;
   customers: Customer[];
   trade: string;
   /** Only passed for a NEW quote — an existing one keeps what it was saved with. */
   defaults?: QuoteDefaults | null;
+  /** Calculator numbers for a NEW quote. Ignored when editing an existing one. */
+  prefill?: QuotePrefill | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const confirm = useConfirm();
-  const [title, setTitle] = useState(initial?.title ?? "");
+  const [title, setTitle] = useState(prefill?.title ?? initial?.title ?? "");
   const [customer, setCustomer] = useState<CustomerSelection>({
     id: initial?.customer_id ?? null,
     name: initial?.customer_name ?? "",
   });
   const [status, setStatus] = useState<QuoteStatus>(initial?.status ?? "draft");
   const [lineItems, setLineItems] = useState<LineItem[]>(
-    initial?.line_items ?? []
+    prefill?.line_items ?? initial?.line_items ?? []
   );
   const [taxPct, setTaxPct] = useState<number>(
     initial?.tax_pct ?? defaults?.taxPct ?? 0
   );
   const [discount, setDiscount] = useState<number>(initial?.discount ?? 0);
-  const [notes, setNotes] = useState(initial?.notes ?? defaults?.notes ?? "");
+  const [notes, setNotes] = useState(prefill?.notes ?? initial?.notes ?? defaults?.notes ?? "");
   const [validUntil, setValidUntil] = useState(
     initial?.valid_until ??
       (defaults && defaults.validDays > 0 ? dateInDays(defaults.validDays) : "")

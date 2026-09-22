@@ -17,10 +17,12 @@ export default function HourlyRate() {
     const h = parseFloat(hrsWeek);
     const w = parseFloat(weeks);
     if (!isFinite(h) || h <= 0 || !isFinite(w) || w <= 0) return null;
-    const target = (s + o) * (1 + m / 100);
+    const costs = s + o;
+    const profit = costs * (m / 100);
+    const target = costs + profit;
     const hours = h * w;
     const rate = target / hours;
-    return { target, hours, rate, day: rate * 8, costs: s + o };
+    return { target, hours, rate, day: rate * 8, costs, salary: s, overhead: o, profit };
   }, [salary, overhead, margin, hrsWeek, weeks]);
 
   return (
@@ -62,6 +64,46 @@ export default function HourlyRate() {
               sub={`${fmt(result.hours, 0)} billable hours/yr covers $${fmt(result.costs)} in costs + profit`}
             />
           </div>
+
+          {/* Where the money goes */}
+          <div className="mt-6">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-bone-500">Where every dollar goes</p>
+            <div className="mt-2 flex h-12 overflow-hidden rounded-xl border border-ink-600">
+              <div
+                className="flex items-center justify-center bg-safety-500/80 text-xs font-extrabold text-ink-950 transition-all duration-300"
+                style={{ width: `${(result.salary / result.target) * 100}%` }}
+              >
+                {result.salary / result.target > 0.18 ? "Your pay" : ""}
+              </div>
+              <div
+                className="flex items-center justify-center bg-ink-600 text-xs font-extrabold text-bone-200 transition-all duration-300"
+                style={{ width: `${(result.overhead / result.target) * 100}%` }}
+              >
+                {result.overhead / result.target > 0.18 ? "Overhead" : ""}
+              </div>
+              <div
+                className="flex items-center justify-center bg-ember-600/90 text-xs font-extrabold text-paper transition-all duration-300"
+                style={{ width: `${(result.profit / result.target) * 100}%` }}
+              >
+                {result.profit / result.target > 0.12 ? "Profit" : ""}
+              </div>
+            </div>
+            <div className="mt-2.5 grid grid-cols-3 gap-2 text-xs">
+              <p className="text-bone-400">
+                <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-safety-500/80 align-middle" />
+                Pay <span className="font-bold text-paper">${fmt(result.salary, 0)}</span>
+              </p>
+              <p className="text-bone-400">
+                <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-ink-600 align-middle" />
+                Overhead <span className="font-bold text-paper">${fmt(result.overhead, 0)}</span>
+              </p>
+              <p className="text-bone-400">
+                <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-ember-600/90 align-middle" />
+                Profit <span className="font-bold text-paper">${fmt(result.profit, 0)}</span>
+              </p>
+            </div>
+          </div>
+
           <p className="mt-4 text-sm leading-relaxed text-bone-500">
             The trap most shops fall into: 40 hours worked is not 40 hours billed. If only 30 of your 40 hours are
             billable, your rate has to carry the other 10. That&apos;s what this math does.

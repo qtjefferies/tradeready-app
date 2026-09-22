@@ -10,6 +10,7 @@ import {
   IconQuote,
   IconReviews,
   IconSchedule,
+  IconWrench,
 } from "./icons";
 
 /**
@@ -27,6 +28,7 @@ const LINKS = [
   { href: "/dashboard/schedule", label: "Schedule", short: "Schedule", Icon: IconSchedule },
   { href: "/dashboard/customers", label: "Customers", short: "Customers", Icon: IconCustomers },
   { href: "/dashboard/reviews", label: "Reviews", short: "Reviews", Icon: IconReviews },
+  { href: "/tools", label: "Toolbox", short: "Tools", Icon: IconWrench },
 ];
 
 export default function DashboardNav() {
