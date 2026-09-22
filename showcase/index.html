@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeReady — First Look</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  :root{
+    --ink-950:#0a0b0d; --ink-900:#101216; --ink-850:#15181d; --ink-800:#1b1f26;
+    --ink-700:#272c36; --ink-600:#39404d;
+    --paper:#f3f0e8; --bone-300:#c9cdd3; --bone-400:#9aa0a9; --bone-500:#7b818b;
+    --safety-300:#ffcb57; --safety-400:#fbbf24; --safety-500:#f59e0b; --safety-800:#92400e;
+    --ember-600:#ea580c;
+    --money-400:#34d399; --alert-400:#f87171; --info-400:#60a5fa; --grape-400:#a78bfa;
+  }
+  body{ background:var(--ink-950); color:var(--paper); font-family:'Inter',system-ui,sans-serif; }
+  .display{ font-family:'Anton',sans-serif; text-transform:uppercase; letter-spacing:.01em; }
+  .hazard{ height:10px; background:repeating-linear-gradient(-45deg,var(--safety-500) 0 18px,var(--ink-950) 18px 36px); }
+  .hazard-thin{ height:6px; background:repeating-linear-gradient(-45deg,var(--safety-500) 0 12px,var(--ink-950) 12px 24px); }
+  .wrap{ max-width:1200px; margin:0 auto; padding:0 20px; }
+  /* HERO */
+  .hero{ padding:72px 0 40px; text-align:center; }
+  .kicker{ display:inline-block; font-size:12px; font-weight:800; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--ink-950); background:linear-gradient(135deg,var(--safety-400),var(--ember-600));
+    padding:8px 18px; border-radius:999px; margin-bottom:24px; }
+  .hero h1{ font-size:clamp(52px,10vw,120px); line-height:.95; }
+  .hero h1 .amber{ color:var(--safety-400); }
+  .hero p.sub{ color:var(--bone-300); font-size:clamp(16px,2.4vw,21px); max-width:640px; margin:22px auto 0; line-height:1.6; }
+  .sample-note{ display:inline-flex; align-items:center; gap:8px; margin-top:18px; font-size:13px; color:var(--bone-400);
+    border:1px dashed var(--ink-600); border-radius:12px; padding:10px 16px; }
+  .sample-note b{ color:var(--safety-300); }
+  /* SECTIONS */
+  .screen-section{ padding:56px 0; }
+  .screen-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:8px; flex-wrap:wrap; }
+  .screen-num{ font-family:'Anton'; font-size:15px; color:var(--ink-950); background:var(--safety-400);
+    width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .screen-head h2{ font-size:clamp(30px,5vw,48px); }
+  .screen-desc{ color:var(--bone-400); max-width:620px; line-height:1.65; margin:6px 0 30px; font-size:16px; }
+  .screen-desc b{ color:var(--bone-300); }
+  /* PHONE */
+  .phones{ display:flex; gap:36px; justify-content:center; flex-wrap:wrap; align-items:flex-start; }
+  .phone{ width:320px; flex:none; background:#000; border-radius:44px; padding:12px;
+    border:1px solid var(--ink-600); box-shadow:0 30px 80px -30px rgba(0,0,0,.9); }
+  .phone-screen{ background:var(--ink-950); border-radius:34px; overflow:hidden; height:660px;
+    display:flex; flex-direction:column; position:relative; }
+  .notch{ position:absolute; top:12px; left:50%; transform:translateX(-50%); width:110px; height:26px;
+    background:#000; border-radius:999px; z-index:5; }
+  .app-body{ flex:1; overflow:hidden; padding:52px 14px 12px; display:flex; flex-direction:column; gap:10px; }
+  .app-header{ display:flex; align-items:center; gap:10px; padding:2px 2px 6px; }
+  .logo-mark{ width:34px; height:34px; border-radius:10px; flex:none;
+    background:repeating-linear-gradient(-45deg,var(--safety-500) 0 7px,var(--ink-950) 7px 14px);
+    border:2px solid var(--safety-500); }
+  .app-header .t1{ font-family:'Anton'; font-size:19px; letter-spacing:.02em; }
+  .app-header .t2{ font-size:11px; color:var(--bone-500); }
+  .greet{ font-size:13px; color:var(--bone-400); padding:0 2px; }
+  .greet b{ color:var(--paper); font-size:15px; display:block; }
+  .card{ background:var(--ink-850); border:1px solid var(--ink-700); border-radius:16px; padding:14px; }
+  .brief-card{ display:flex; gap:12px; align-items:flex-start; }
+  .brief-card .rail{ width:5px; align-self:stretch; border-radius:99px; flex:none; }
+  .rail-amber{ background:var(--safety-500); } .rail-red{ background:var(--alert-400); }
+  .rail-blue{ background:var(--info-400); } .rail-green{ background:var(--money-400); }
+  .rail-purple{ background:var(--grape-400); }
+  .brief-card h4{ font-size:13.5px; font-weight:700; }
+  .brief-card p{ font-size:12px; color:var(--bone-400); margin-top:3px; line-height:1.5; }
+  .brief-card .big{ font-family:'Anton'; font-size:26px; margin-top:2px; }
+  .tag{ display:inline-block; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    padding:4px 9px; border-radius:999px; border:1px solid; margin-top:8px; }
+  .tag-red{ color:var(--alert-400); border-color:var(--alert-400); }
+  .tag-amber{ color:var(--safety-300); border-color:var(--safety-500); }
+  .tag-green{ color:var(--money-400); border-color:var(--money-400); }
+  .tag-blue{ color:var(--info-400); border-color:var(--info-400); }
+  .tag-purple{ color:var(--grape-400); border-color:var(--grape-400); }
+  .mini-btn{ display:inline-block; margin-top:10px; font-size:12px; font-weight:800; color:var(--ink-950);
+    background:linear-gradient(135deg,var(--safety-400),var(--ember-600)); padding:9px 14px; border-radius:10px; }
+  .tabbar{ display:flex; border-top:1px solid var(--ink-700); background:var(--ink-900);
+    padding:10px 4px calc(10px + env(safe-area-inset-bottom)); }
+  .tab{ flex:1; text-align:center; font-size:10px; color:var(--bone-500); font-weight:600; }
+  .tab .dot{ width:22px; height:22px; border-radius:7px; background:var(--ink-700); margin:0 auto 4px; }
+  .tab.active{ color:var(--safety-300); } .tab.active .dot{ background:var(--safety-500); }
+  .section-label{ font-size:10.5px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--bone-500); padding:4px 2px 0; }
+  .row-line{ display:flex; justify-content:space-between; align-items:center; padding:11px 2px; border-bottom:1px solid var(--ink-700); font-size:13px; }
+  .row-line:last-child{ border-bottom:none; }
+  .row-line .amt{ font-weight:800; font-family:'Anton'; font-size:16px; letter-spacing:.02em; }
+  .pill-row{ display:flex; gap:8px; overflow:hidden; padding:2px; }
+  .pill{ flex:none; font-size:12px; font-weight:700; padding:8px 14px; border-radius:999px;
+    border:1px solid var(--ink-600); color:var(--bone-400); }
+  .pill.on{ background:var(--safety-500); border-color:var(--safety-500); color:var(--ink-950); }
+  .quote-card{ position:relative; overflow:hidden; }
+  .quote-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:5px; }
+  .quote-card.q-amber::before{ background:var(--safety-500); } .quote-card.q-green::before{ background:var(--money-400); }
+  .quote-card.q-grey::before{ background:var(--ink-600); }
+  .quote-card{ padding-left:20px; }
+  .ai-box{ border:1px solid var(--safety-800); background:rgba(245,158,11,.07); border-radius:14px; padding:12px; }
+  .ai-box .lbl{ font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--safety-300); margin-bottom:6px; }
+  .ai-box p{ font-size:12.5px; color:var(--bone-300); line-height:1.55; font-style:italic; }
+  .field{ margin-bottom:4px; }
+  .field .fl{ font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--bone-500); margin-bottom:6px; }
+  .field .fi{ background:var(--ink-900); border:1px solid var(--ink-600); border-radius:12px; padding:12px; font-size:13.5px; color:var(--paper); }
+  .field .fi.dim{ color:var(--bone-500); }
+  .li-row{ display:flex; justify-content:space-between; align-items:center; background:var(--ink-900);
+    border:1px solid var(--ink-700); border-radius:12px; padding:10px 12px; }
+  .li-row .nm{ font-size:12.5px; font-weight:600; } .li-row .qt{ font-size:11px; color:var(--bone-500); }
+  .li-row .pr{ font-family:'Anton'; font-size:15px; color:var(--safety-300); }
+  .sticky-save{ background:var(--ink-900); border-top:1px solid var(--ink-700); padding:12px 14px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .sticky-save .tot{ font-family:'Anton'; font-size:24px; color:var(--safety-300); }
+  .sticky-save .tot small{ display:block; font-family:'Inter'; font-size:10px; color:var(--bone-500); font-weight:700; letter-spacing:.1em; }
+  .btn-hard{ background:linear-gradient(135deg,var(--safety-400),var(--ember-600)); color:var(--ink-950);
+    font-weight:800; font-size:14px; border:none; border-radius:14px; padding:14px 22px;
+    box-shadow:0 3px 0 0 var(--safety-800), 0 10px 24px -10px rgba(245,158,11,.55); }
+  .stat-hero{ text-align:center; padding:18px 14px; }
+  .stat-hero .n{ font-family:'Anton'; font-size:44px; color:var(--money-400); line-height:1; }
+  .stat-hero .l{ font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--bone-500); margin-top:6px; }
+  .cust-top{ display:flex; gap:12px; align-items:center; }
+  .avatar{ width:44px; height:44px; border-radius:14px; background:linear-gradient(135deg,var(--ink-700),var(--ink-800));
+    border:1px solid var(--ink-600); display:flex; align-items:center; justify-content:center;
+    font-family:'Anton'; font-size:18px; color:var(--safety-300); flex:none; }
+  .equip{ display:flex; gap:10px; align-items:flex-start; background:var(--ink-900); border:1px solid var(--ink-700); border-radius:12px; padding:11px 12px; }
+  .equip .ic{ width:30px; height:30px; border-radius:9px; background:rgba(245,158,11,.12); border:1px solid var(--safety-800); flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .equip h5{ font-size:12.5px; } .equip p{ font-size:11.5px; color:var(--bone-400); margin-top:2px; line-height:1.5; }
+  .equip p b{ color:var(--safety-300); }
+  /* TOKENS */
+  .tokens{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:26px; }
+  .token{ border-radius:14px; padding:16px; border:1px solid var(--ink-700); }
+  .token .sw{ height:44px; border-radius:10px; margin-bottom:10px; }
+  .token h5{ font-size:13px; } .token p{ font-size:11.5px; color:var(--bone-500); margin-top:2px; }
+  /* FOOTER */
+  .outro{ text-align:center; padding:64px 0 30px; }
+  .outro h2{ font-size:clamp(34px,6vw,60px); }
+  .outro h2 .amber{ color:var(--safety-400); }
+  .check-list{ display:inline-block; text-align:left; margin:26px auto 0; }
+  .check-list div{ display:flex; gap:12px; align-items:center; padding:9px 0; font-size:15px; color:var(--bone-300); }
+  .check-list .ck{ width:26px; height:26px; border-radius:8px; background:rgba(52,211,153,.12);
+    border:1px solid var(--money-400); color:var(--money-400); display:flex; align-items:center; justify-content:center; font-weight:800; flex:none; }
+  .deploy-note{ max-width:620px; margin:30px auto 0; border:1px solid var(--safety-800); background:rgba(245,158,11,.06);
+    border-radius:16px; padding:20px 22px; font-size:14.5px; line-height:1.7; color:var(--bone-300); }
+  .deploy-note b{ color:var(--safety-300); }
+  footer{ border-top:1px solid var(--ink-700); margin-top:40px; padding:26px 0 60px; text-align:center; color:var(--bone-500); font-size:12.5px; }
+  @media (max-width:420px){ .phone{ width:100%; max-width:340px; } }
+</style>
+</head>
+<body>
+
+<div class="hazard"></div>
+
+<header class="hero wrap">
+  <span class="kicker">Design walkthrough</span>
+  <h1 class="display">TRADE<span class="amber">READY</span></h1>
+  <p class="sub">The AI office manager for trades pros — rebuilt from the ground up with a rugged, job-site-ready design. Dark charcoal, safety amber, type you can read in sunlight, buttons you can hit with a thumb.</p>
+  <div><span class="sample-note">📋 Every screen below is a <b>faithful recreation</b> of your real app's new design — shown with <b>sample data</b> so you can see it before it goes live.</span></div>
+</header>
+
+<div class="hazard-thin"></div>
+
+<!-- 1 DAILY BRIEFING -->
+<section class="screen-section wrap">
+  <div class="screen-head"><span class="screen-num">1</span><h2 class="display">The Daily Briefing</h2></div>
+  <p class="screen-desc">The screen contractors open every morning like email. <b>Everything that needs attention today</b> — stale quotes, overdue invoices, today's jobs, reviews due — in one glance. This is the habit that makes the app daily-use.</p>
+  <div class="phones">
+    <div class="phone"><div class="phone-screen"><div class="notch"></div>
+      <div class="app-body">
+        <div class="app-header"><div class="logo-mark"></div><div><div class="t1 display">TRADEREADY</div><div class="t2">Mike's Plumbing &amp; Heat</div></div></div>
+        <div class="greet"><b>Good morning, Mike ☀️</b>Here's what needs you today.</div>
+        <div class="card brief-card"><span class="rail rail-amber"></span><div><h4>2 quotes going cold</h4><p>Panel upgrade ($3,200) and water heater ($1,847) haven't been answered in 3+ days.</p><span class="mini-btn">Send nudges →</span></div></div>
+        <div class="card brief-card"><span class="rail rail-red"></span><div><h4>Overdue invoices</h4><div class="big display" style="color:var(--alert-400)">$4,850</div><p>3 invoices past due. One is 21 days out.</p><span class="tag tag-red">Needs action</span></div></div>
+        <div class="card brief-card"><span class="rail rail-blue"></span><div><h4>Today: 2 jobs</h4><p>8:00a — Drain cleaning, Oak St<br>1:30p — Estimate, Maple Ave</p></div></div>
+        <div class="card brief-card"><span class="rail rail-purple"></span><div><h4>3 reviews due</h4><p>Jobs finished this week with no review requested yet.</p></div></div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active"><div class="dot"></div>Briefing</div><div class="tab"><div class="dot"></div>Quotes</div><div class="tab"><div class="dot"></div>Invoices</div><div class="tab"><div class="dot"></div>Customers</div><div class="tab"><div class="dot"></div>More</div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<div class="hazard-thin"></div>
+
+<!-- 2 QUOTE BUILDER -->
+<section class="screen-section wrap">
+  <div class="screen-head"><span class="screen-num">2</span><h2 class="display">Quotes in under a minute</h2></div>
+  <p class="screen-desc">Describe the job like you'd tell a buddy — <b>the AI drafts the line items</b> with labor/materials split. Big per-line totals, a sticky save bar with the live total, and one tap to a branded PDF.</p>
+  <div class="phones">
+    <div class="phone"><div class="phone-screen"><div class="notch"></div>
+      <div class="app-body">
+        <div class="app-header"><div class="logo-mark"></div><div><div class="t1 display">NEW QUOTE</div><div class="t2">Draft — not sent</div></div></div>
+        <div class="field"><div class="fl">Customer</div><div class="fi">Jane Miller</div></div>
+        <div class="ai-box"><div class="lbl">✨ AI assist</div><p>"Replace a 50-gallon electric water heater in the garage. Old one is leaking from the bottom. Haul the old one away."</p></div>
+        <div class="section-label">Line items</div>
+        <div class="li-row"><div><div class="nm">50-gal water heater</div><div class="qt">Materials × 1</div></div><div class="pr">$780</div></div>
+        <div class="li-row"><div><div class="nm">Install labor</div><div class="qt">Labor × 3 hrs</div></div><div class="pr">$540</div></div>
+        <div class="li-row"><div><div class="nm">Haul-away &amp; disposal</div><div class="qt">Labor × 1</div></div><div class="pr">$120</div></div>
+        <div class="field"><div class="fl">Notes (shown on PDF)</div><div class="fi dim">1-year labor warranty included…</div></div>
+      </div>
+      <div class="sticky-save"><div class="tot"><small>TOTAL</small>$1,847</div><button class="btn-hard">Save quote</button></div>
+      <div class="tabbar">
+        <div class="tab"><div class="dot"></div>Briefing</div><div class="tab active"><div class="dot"></div>Quotes</div><div class="tab"><div class="dot"></div>Invoices</div><div class="tab"><div class="dot"></div>Customers</div><div class="tab"><div class="dot"></div>More</div>
+      </div>
+    </div></div>
+    <div class="phone"><div class="phone-screen"><div class="notch"></div>
+      <div class="app-body">
+        <div class="app-header"><div class="logo-mark"></div><div><div class="t1 display">QUOTES</div><div class="t2">6 total · $14,203 pipeline</div></div></div>
+        <div class="pill-row"><span class="pill on">All</span><span class="pill">Draft</span><span class="pill">Sent</span><span class="pill">Accepted</span></div>
+        <div class="card brief-card quote-card q-amber"><div><h4>Panel upgrade — 200A</h4><p>Tom Alvarez · Sent 3 days ago</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag tag-amber">Sent</span><span class="row-line amt" style="border:none;padding:0">$3,200</span></div></div></div>
+        <div class="card brief-card quote-card q-amber"><div><h4>Water heater replacement</h4><p>Jane Miller · Viewed yesterday</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag tag-purple">Viewed</span><span class="row-line amt" style="border:none;padding:0">$1,847</span></div></div></div>
+        <div class="card brief-card quote-card q-green"><div><h4>Kitchen rewire</h4><p>Sam Okafor · Accepted</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag tag-green">Accepted</span><span class="row-line amt" style="border:none;padding:0">$2,150</span></div></div></div>
+        <div class="card brief-card quote-card q-grey"><div><h4>Bathroom fan + GFCI</h4><p>Lisa Tran · Draft</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag" style="color:var(--bone-400);border-color:var(--ink-600)">Draft</span><span class="row-line amt" style="border:none;padding:0">$640</span></div></div></div>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><div class="dot"></div>Briefing</div><div class="tab active"><div class="dot"></div>Quotes</div><div class="tab"><div class="dot"></div>Invoices</div><div class="tab"><div class="dot"></div>Customers</div><div class="tab"><div class="dot"></div>More</div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<div class="hazard-thin"></div>
+<!-- 3 MONEY -->
+<section class="screen-section wrap">
+  <div class="screen-head"><span class="screen-num">3</span><h2 class="display">Money in, money tracked</h2></div>
+  <p class="screen-desc">Accepted quote becomes an <b>invoice in one tap</b>. Big money numbers, overdue flagged in red, paid in green. The follow-up queue drafts the "just checking in on invoice #1042" nudge so getting paid doesn't eat the evening.</p>
+  <div class="phones">
+    <div class="phone"><div class="phone-screen"><div class="notch"></div>
+      <div class="app-body">
+        <div class="app-header"><div class="logo-mark"></div><div><div class="t1 display">INVOICES</div><div class="t2">September</div></div></div>
+        <div class="card stat-hero"><div class="n display">$12,400</div><div class="l">Collected this month</div></div>
+        <div class="card brief-card"><span class="rail rail-red"></span><div style="flex:1"><h4>Invoice #1042 — Drain cleaning</h4><p>Oak St property · Due 21 days ago</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag tag-red">Overdue</span><span class="amt display" style="font-size:18px">$1,250</span></div><span class="mini-btn">Draft reminder →</span></div></div>
+        <div class="card brief-card"><span class="rail rail-amber"></span><div style="flex:1"><h4>Invoice #1045 — Panel upgrade</h4><p>Tom Alvarez · Due in 4 days</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag tag-amber">Unpaid</span><span class="amt display" style="font-size:18px">$3,200</span></div></div></div>
+        <div class="card brief-card"><span class="rail rail-green"></span><div style="flex:1"><h4>Invoice #1039 — Water heater</h4><p>Jane Miller · Paid Sep 12</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag tag-green">Paid ✓</span><span class="amt display" style="font-size:18px">$1,847</span></div></div></div>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><div class="dot"></div>Briefing</div><div class="tab"><div class="dot"></div>Quotes</div><div class="tab active"><div class="dot"></div>Invoices</div><div class="tab"><div class="dot"></div>Customers</div><div class="tab"><div class="dot"></div>More</div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<div class="hazard-thin"></div>
+
+<!-- 4 CUSTOMERS -->
+<section class="screen-section wrap">
+  <div class="screen-head"><span class="screen-num">4</span><h2 class="display">Customers you never lose</h2></div>
+  <p class="screen-desc">Every job, every note, every piece of equipment on record. <b>"Mrs. Johnson's water heater is 9 years old"</b> becomes a replacement job before it becomes an emergency. This history is the moat — once it lives here, they never leave.</p>
+  <div class="phones">
+    <div class="phone"><div class="phone-screen"><div class="notch"></div>
+      <div class="app-body">
+        <div class="app-header"><div class="logo-mark"></div><div><div class="t1 display">CUSTOMER</div><div class="t2">Since 2023 · 4 jobs</div></div></div>
+        <div class="card"><div class="cust-top"><div class="avatar">JM</div><div><h4 style="font-size:15px">Jane Miller</h4><p style="font-size:12px;color:var(--bone-400)">(555) 014-2288 · Maple Ave</p></div></div>
+          <div style="display:flex;gap:16px;margin-top:12px"><div><div class="display" style="font-size:20px;color:var(--safety-300)">$6,210</div><div style="font-size:10px;color:var(--bone-500);font-weight:700;letter-spacing:.1em">LIFETIME</div></div><div><div class="display" style="font-size:20px">4.9 ★</div><div style="font-size:10px;color:var(--bone-500);font-weight:700;letter-spacing:.1em">3 REVIEWS</div></div></div>
+        </div>
+        <div class="section-label">Equipment on record</div>
+        <div class="equip"><div class="ic">🔥</div><div><h5>Water heater — 50 gal electric</h5><p>Installed Sep 2026 by you. <b>9 yrs old — suggest replacement this fall.</b></p></div></div>
+        <div class="equip"><div class="ic">❄️</div><div><h5>HVAC — condenser unit</h5><p>Serviced Jun 2026. Filter due every 90 days.</p></div></div>
+        <div class="section-label">Job history</div>
+        <div class="row-line"><span>Water heater replacement</span><span class="amt">$1,847</span></div>
+        <div class="row-line"><span>Kitchen GFCI + fan</span><span class="amt">$640</span></div>
+        <div class="row-line"><span>Drain cleaning</span><span class="amt">$320</span></div>
+      </div>
+      <div class="tabbar">
+        <div class="tab"><div class="dot"></div>Briefing</div><div class="tab"><div class="dot"></div>Quotes</div><div class="tab"><div class="dot"></div>Invoices</div><div class="tab active"><div class="dot"></div>Customers</div><div class="tab"><div class="dot"></div>More</div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<div class="hazard-thin"></div>
+
+<!-- 5 DESIGN SYSTEM -->
+<section class="screen-section wrap">
+  <div class="screen-head"><span class="screen-num">5</span><h2 class="display">The design system</h2></div>
+  <p class="screen-desc">One set of tokens drives every screen — <b>Anton</b> condensed headlines like a workwear brand, <b>Inter</b> body text, dark charcoal surfaces, safety-amber accents. Buttons press like real hardware. Nothing pastel, nothing fragile.</p>
+  <div class="tokens">
+    <div class="token"><div class="sw" style="background:#0a0b0d;border:1px solid #272c36"></div><h5>Ink 950</h5><p>#0a0b0d · page base</p></div>
+    <div class="token"><div class="sw" style="background:#15181d;border:1px solid #272c36"></div><h5>Ink 850</h5><p>#15181d · cards</p></div>
+    <div class="token"><div class="sw" style="background:linear-gradient(135deg,#fbbf24,#ea580c)"></div><h5>Safety → Ember</h5><p>brand gradient</p></div>
+    <div class="token"><div class="sw" style="background:#f3f0e8"></div><h5>Paper</h5><p>#f3f0e8 · warm white</p></div>
+    <div class="token"><div class="sw" style="background:#34d399"></div><h5>Money</h5><p>paid / success</p></div>
+    <div class="token"><div class="sw" style="background:#f87171"></div><h5>Alert</h5><p>overdue / danger</p></div>
+    <div class="token"><div class="sw" style="background:repeating-linear-gradient(-45deg,#f59e0b 0 10px,#0a0b0d 10px 20px)"></div><h5>Hazard stripe</h5><p>used sparingly</p></div>
+    <div class="token"><div class="sw" style="background:#1b1f26;border:1px solid #39404d;display:flex;align-items:center;justify-content:center"><span class="display" style="font-size:22px">Aa</span></div><h5>Anton / Inter</h5><p>display / body</p></div>
+  </div>
+  <div style="margin-top:26px;display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+    <button class="btn-hard">Hard-press button</button>
+    <span style="font-size:13px;color:var(--bone-500)">52px touch targets · 16px inputs (no iOS zoom) · bottom tab bar on mobile · sticky save bars in thumb reach</span>
+  </div>
+</section>
+
+<div class="hazard"></div>
+
+<!-- OUTRO -->
+<section class="outro wrap">
+  <h2 class="display">READY WHEN<br><span class="amber">YOU ARE.</span></h2>
+  <div class="check-list">
+    <div><span class="ck">✓</span> Accounts with secure login — built</div>
+    <div><span class="ck">✓</span> Daily briefing dashboard — built</div>
+    <div><span class="ck">✓</span> Quotes + AI line items + PDF export — built</div>
+    <div><span class="ck">✓</span> Invoices, customers, reviews, schedule — built</div>
+    <div><span class="ck">✓</span> Full rugged redesign, mobile-first — built</div>
+  </div>
+  <div class="deploy-note">
+    <b>To put it on the internet:</b> the app needs a home — Vercel hosting, a Postgres database, and a Gemini API key. Same three accounts as HireReady. Once those are in, this goes live as the real product: contractors sign up, save their business in it, and pay you monthly.
+  </div>
+</section>
+
+<footer>
+  TradeReady · design walkthrough · all screens shown with sample data · the real app is complete and ready to deploy
+</footer>
+
+</body>
+</html>
