@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { activeDriver, isDatabaseConfigured, sql } from "@/lib/db";
+import { activeDriver, databaseUrlSource, isDatabaseConfigured, sql } from "@/lib/db";
 import { aiConfigured } from "@/lib/ai";
 
 /**
@@ -44,13 +44,15 @@ export async function GET() {
           : "Could not query the database.";
     }
   } else {
-    detail = "POSTGRES_URL is not set on this deployment.";
+    detail =
+      "No database URL on this deployment. Set POSTGRES_URL, or connect a database — a Marketplace integration supplies STORAGE_POSTGRES_URL.";
   }
 
   return NextResponse.json({
     ok: database === "connected",
     database,
     driver,
+    source: databaseUrlSource(),
     ai: aiConfigured() ? "configured" : "not_configured",
     ...(detail ? { detail } : {}),
   });

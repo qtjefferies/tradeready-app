@@ -41,3 +41,6 @@ check-ai.sh
 .ai-format.py
 .env.backup-*
 .env.local
+setup-deploy.sh
+.env.vercel
+.env*

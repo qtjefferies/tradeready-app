@@ -4,12 +4,49 @@ import type { Pool, QueryResultRow } from "pg";
 /**
  * Database availability and driver selection.
  *
- * `POSTGRES_URL` is set automatically when a database is connected to the
- * Vercel project. Until it exists, every query path returns an honest
+ * Until a connection string exists, every query path returns an honest
  * "not configured" error — nothing is faked and nothing is silently dropped.
+ *
+ * WHERE THE CONNECTION STRING LIVES.
+ *
+ * Vercel Marketplace integrations namespace the variables they inject, so a
+ * Supabase database connected through the dashboard arrives as
+ * `STORAGE_POSTGRES_URL`, not `POSTGRES_URL`. Reading only the bare name
+ * meant a database that was correctly connected still reported "not
+ * configured", with nothing in the UI to suggest why.
+ *
+ * Checked in order of specificity: an explicitly-set POSTGRES_URL wins, then
+ * the Marketplace-prefixed one, then the name most other hosts use.
  */
+const URL_VARS = [
+  "POSTGRES_URL",
+  "STORAGE_POSTGRES_URL",
+  "DATABASE_URL",
+  "POSTGRES_URL_NON_POOLING",
+  "STORAGE_POSTGRES_URL_NON_POOLING",
+] as const;
+
+export function databaseUrl(): string | undefined {
+  for (const name of URL_VARS) {
+    const v = process.env[name];
+    // A variable that exists but is blank is the same as absent, and is a
+    // common half-finished state in a dashboard.
+    if (v && v.trim().length > 0) return v.trim();
+  }
+  return undefined;
+}
+
+/** Which variable supplied it — surfaced on /api/health for diagnosis. */
+export function databaseUrlSource(): string | null {
+  for (const name of URL_VARS) {
+    const v = process.env[name];
+    if (v && v.trim().length > 0) return name;
+  }
+  return null;
+}
+
 export function isDatabaseConfigured(): boolean {
-  return Boolean(process.env.POSTGRES_URL);
+  return Boolean(databaseUrl());
 }
 
 /**
@@ -29,7 +66,7 @@ export function isDatabaseConfigured(): boolean {
  * this file knows or cares which one is in use.
  */
 function isNeonHost(): boolean {
-  const url = process.env.POSTGRES_URL;
+  const url = databaseUrl();
   if (!url) return false;
   try {
     const { hostname } = new URL(url);
@@ -44,7 +81,7 @@ function isNeonHost(): boolean {
 }
 
 function isLocalHost(): boolean {
-  const url = process.env.POSTGRES_URL;
+  const url = databaseUrl();
   if (!url) return false;
   try {
     const { hostname } = new URL(url);
@@ -63,7 +100,7 @@ function pgPool(): Pool {
     const { Pool: PgPool } = require("pg") as typeof import("pg");
     const local = isLocalHost();
     globalForPg.__tradeReadyPool = new PgPool({
-      connectionString: process.env.POSTGRES_URL,
+      connectionString: databaseUrl(),
       /**
        * Managed providers terminate TLS with certificates that aren't always
        * chainable from Node's default trust store, and a failure there reads
@@ -101,6 +138,16 @@ function pgSql<T extends QueryResultRow>(
     ""
   );
   return pgPool().query<T>(text, values as unknown[]);
+}
+
+/**
+ * `@vercel/postgres` reads `process.env.POSTGRES_URL` directly and has no
+ * way to be told otherwise, so when the value arrived under a different name
+ * it is mirrored across before that driver is ever used.
+ */
+if (!process.env.POSTGRES_URL) {
+  const resolved = databaseUrl();
+  if (resolved) process.env.POSTGRES_URL = resolved;
 }
 
 /** Re-export for query modules. */
