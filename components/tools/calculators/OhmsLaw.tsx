@@ -50,7 +50,7 @@ function CircuitScene({ V, I, R, P }: { V: number; I: number; R: number; P: numb
   // power bar: up to 5 ft tall at 50 kW
   const barMax = 5;
   const barH = Math.max(0.15, barMax * Math.min(Math.log10(P + 1) / Math.log10(50001), 1));
-  const bx = x1 + load.w + 1.2;
+  const bx = x1 + load.w + 2.4;
   const bw = 0.9;
   const corners = [
     ...boxCorners(0, 0, 0, src.w, src.d, src.h),
@@ -64,8 +64,6 @@ function CircuitScene({ V, I, R, P }: { V: number; I: number; R: number; P: numb
   const srcTop = proj(src.w / 2, src.d, src.h);
   const loadTop = proj(x1 + load.w / 2, load.d, load.h);
   const mid = proj((x0 + x1) / 2, src.d, wireHi + wireT);
-  const midLo = proj((x0 + x1) / 2, src.d, 0);
-  const barTop = proj(bx + bw / 2, bw, barH);
   const barBase = proj(bx + bw / 2, bw, 0);
   const wireColor = "#c98e1f";
 
@@ -99,14 +97,11 @@ function CircuitScene({ V, I, R, P }: { V: number; I: number; R: number; P: numb
       <text x={mid.x} y={mid.y - 12} fill={SAFETY} fontSize={12} fontWeight={800} textAnchor="middle">
         {fmt(I, 2)} A
       </text>
-      <text x={midLo.x} y={midLo.y + 20} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle">
-        wire thickness follows current
+      <text x={12} y={H - 10} fill={DIM} fontSize={11} fontWeight={700} textAnchor="start">
+        Wire thickness follows current · bar height follows power
       </text>
-      <text x={barTop.x} y={barTop.y - 10} fill="#fb923c" fontSize={13} fontWeight={800} textAnchor="middle">
+      <text x={barBase.x} y={barBase.y + 20} fill="#fb923c" fontSize={13} fontWeight={800} textAnchor="middle">
         {P >= 1000 ? `${fmt(P / 1000, 2)} kW` : `${fmt(P, 0)} W`}
-      </text>
-      <text x={barBase.x} y={barBase.y + 20} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle">
-        power
       </text>
     </IsoStage>
   );

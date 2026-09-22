@@ -97,10 +97,10 @@ export const TOOLS: FreeTool[] = [
     short: "BTU / AC sizing",
     trade: "hvac",
     tag: "Homeowner favorite",
-    answers: "What size AC does this room need?",
+    answers: "What size AC or furnace?",
     blurb:
-      "Cooling load in BTU/hr and tons from square footage, climate, ceiling height, insulation, and sun exposure.",
-    teaser: "BTU/hr and tons from square footage and climate",
+      "Cooling load in tons or furnace input by AFUE, from square footage, climate, ceiling height, insulation, and sun — with an honest line on where Manual J takes over.",
+    teaser: "Tons of cooling or furnace BTU from square footage and climate",
   },
   {
     href: "/tools/plumbing/water-heater-sizing-calculator",
@@ -111,8 +111,8 @@ export const TOOLS: FreeTool[] = [
     tag: "Pro pick",
     answers: "Tank or tankless, and how big?",
     blurb:
-      "Tank gallons or tankless GPM, sized from the household's busiest hour — showers, laundry, dishwasher — not a guess.",
-    teaser: "Tank gallons or tankless GPM from peak-hour demand",
+      "Tank size by first-hour rating for gas or electric, or tankless GPM and gas input — sized from the household's busiest hour, not a guess.",
+    teaser: "Tank by first-hour rating, or tankless GPM and BTU input",
   },
   {
     href: "/tools/general/concrete-calculator",
@@ -123,8 +123,8 @@ export const TOOLS: FreeTool[] = [
     tag: "DIY favorite",
     answers: "How much concrete do I order?",
     blurb:
-      "Cubic yards to order or bags to buy for any slab, patio, or driveway — with waste built in so you don't come up short.",
-    teaser: "Yards to order or bags to buy, waste included",
+      "Cubic yards to order or bags to buy for a slab, footing, pier, or steps — waste built in and rounded to the quarter yard the plant sells.",
+    teaser: "Slabs, footings, piers, and steps — yards or bags",
   },
   {
     href: "/tools/business/hourly-rate-calculator",
@@ -135,7 +135,7 @@ export const TOOLS: FreeTool[] = [
     tag: "Shop essential",
     answers: "What should I actually charge?",
     blurb:
-      "The rate that covers your pay, overhead, and profit — worked back from the hours you can really bill, not the hours you work.",
+      "The rate that covers your pay, payroll tax, overhead, and a true profit margin — worked back from the hours you can really bill, not the hours you work.",
     teaser: "The rate that covers pay, overhead, and profit",
   },
 ];
