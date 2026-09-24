@@ -40,10 +40,10 @@ entered, and a win-rate screen that says why you lose the jobs you lose.
   defaults. Password change and account deletion.
 - **Auth recovery:** password reset by emailed single-use token (1-hour
   expiry, revokes all sessions).
-- **AI:** Claude (Anthropic), server-side only, with structured outputs so a
-  malformed draft can't reach a customer's quote. Defaults to Haiku 4.5 to
-  keep a free app affordable; one env var swaps in a stronger model. No
-  `ANTHROPIC_API_KEY` → honest 503, never fabricated output.
+- **AI:** Hugging Face Inference Providers, Ollama (cloud or self-hosted) or
+  Claude, server-side only. Every draft is validated against a schema so a
+  malformed one can't reach a customer's quote. Defaults to gpt-oss-120b on
+  Hugging Face / Ollama. No AI key → honest 503, never fabricated output.
 - **No fake data, no fabricated testimonials or metrics.** No auto-sent
   texts/emails (Twilio deliberately out of scope for MVP).
 
@@ -51,7 +51,7 @@ entered, and a win-rate screen that says why you lose the jobs you lose.
 
 ```bash
 npm install
-cp .env.example .env   # fill in POSTGRES_URL and ANTHROPIC_API_KEY
+cp .env.example .env   # fill in POSTGRES_URL and HF_TOKEN (or OLLAMA_API_KEY)
 # One-time production setup: run lib/schema.sql against your Postgres database
 npm run dev
 ```
@@ -68,7 +68,7 @@ npm run dev
 See `.env.example`:
 
 - `POSTGRES_URL` — Vercel Postgres (or any Postgres) connection string
-- `ANTHROPIC_API_KEY` — Anthropic API key for the AI drafting features
+- `HF_TOKEN` / `OLLAMA_API_KEY` / `ANTHROPIC_API_KEY` — any one enables the AI drafting features
 
 ## Deployment (Vercel + Vercel Postgres)
 
@@ -76,7 +76,8 @@ See `.env.example`:
    `POSTGRES_URL`.
 2. In the database, run `lib/schema.sql` once (tables: users, sessions,
    customers, equipment, quotes, invoices, jobs, reviews).
-3. Set `ANTHROPIC_API_KEY` from console.anthropic.com.
+3. Set `HF_TOKEN` (huggingface.co/settings/tokens) or `OLLAMA_API_KEY`
+   (ollama.com/settings/keys).
 4. Deploy. No `vercel.json` needed — defaults work.
 
 ## Security notes

@@ -24,9 +24,13 @@ Set these in the Vercel project (Settings → Environment Variables). See
 |---|---|---|
 | `POSTGRES_URL` | Yes | Everything. Every route returns an honest 503. |
 | `NEXT_PUBLIC_URL` | Yes | Quote share links and password-reset links point at the wrong host. |
-| `ANTHROPIC_API_KEY` | No | All five AI drafting features return 503. The rest of the app works. |
-| `ANTHROPIC_WORKSPACE_ID` | Only for org-level keys | AI calls fail with "not scoped to a workspace". Not needed if the key was created inside a workspace. |
-| `ANTHROPIC_MODEL` | No | Overrides the model. Defaults to `claude-haiku-4-5` (cheapest). `claude-opus-5` gives better quote estimates. |
+| `HF_TOKEN` | One AI key | Hugging Face token (Inference Providers permission). Used first when set. |
+| `OLLAMA_API_KEY` | One AI key | Ollama Cloud key. `OLLAMA_BASE_URL` points at a self-hosted server instead. |
+| `ANTHROPIC_API_KEY` | One AI key | Claude. Used only if neither key above is set. With no AI key at all, the five AI drafting features return 503 and the rest of the app works. |
+| `AI_PROVIDER` | No | Forces `huggingface`, `ollama` or `anthropic` when more than one key is set. |
+| `AI_MODEL` | No | Overrides the Hugging Face / Ollama model. Defaults to gpt-oss-120b. |
+| `ANTHROPIC_WORKSPACE_ID` | Only for org-level Anthropic keys | Claude calls fail with "not scoped to a workspace". |
+| `ANTHROPIC_MODEL` | No | Overrides the Claude model. Defaults to `claude-haiku-4-5`. |
 | `RESEND_API_KEY` | No | Password reset is unavailable (says so honestly). |
 | `EMAIL_FROM` | No | Same as above — both are needed together. |
 

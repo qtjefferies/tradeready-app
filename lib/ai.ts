@@ -6,85 +6,83 @@ import type { LineItem } from "./money";
 import { normalizeLineItems } from "./money";
 
 /**
- * Shared Claude helper for TradeReady's AI features.
+ * Shared AI helper for TradeReady's drafting features.
  *
- * Runs server-side only: `ANTHROPIC_API_KEY` is read from the environment and
- * never leaves the server. When the key is missing, callers get an honest 503
- * — the client shows that message rather than a fabricated result.
+ * Runs server-side only: every key is read from the environment and never
+ * leaves the server. When no provider is configured, callers get an honest
+ * 503 — the client shows that message rather than a fabricated result.
  *
- * This replaced a Gemini integration that had to strip markdown fences off
- * the response and hope the JSON parsed. Structured outputs remove that whole
- * class of failure: the schema goes with the request and the SDK hands back a
- * validated object, so a malformed draft can't reach a customer's quote.
+ * Three providers, one contract — each feature asks for a JSON object that
+ * matches a zod schema and gets back a validated object or an error:
+ *
+ * - "huggingface": Hugging Face Inference Providers (router.huggingface.co),
+ *   OpenAI-compatible. Key: HF_TOKEN.
+ * - "ollama": Ollama Cloud (ollama.com) with OLLAMA_API_KEY, or a self-hosted
+ *   Ollama server via OLLAMA_BASE_URL. Also OpenAI-compatible.
+ * - "anthropic": Claude, with native structured outputs. Key: ANTHROPIC_API_KEY.
+ *
+ * AI_PROVIDER picks one explicitly. Without it, the first provider with a key
+ * wins, in the order above.
  */
 
-/**
- * Haiku 4.5 by default: roughly a fifth the cost of the Opus tier, which is
- * what matters while the app is free and every draft comes out of pocket.
- * Drafts are shorter and blunter — fine for a sixty-word text message, and
- * the contractor reviews every one before it goes anywhere.
- *
- * Set ANTHROPIC_MODEL=claude-opus-5 for noticeably better estimating
- * judgement on the quote drafter if the bill ever stops being the constraint.
- */
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+type Provider = "huggingface" | "ollama" | "anthropic";
 
-/**
- * `output_config.effort` is REJECTED WITH A 400 on Haiku 4.5 and Sonnet 4.5 —
- * it's a feature of the Opus tier and the 5-series. Sending it to the default
- * model would fail every single call, so it's attached only when the
- * configured model actually takes it. The same request otherwise.
- */
-const EFFORT_UNSUPPORTED = /haiku-4-5|sonnet-4-5|-3-5-|-3-opus|-3-haiku/;
+function hfToken(): string | undefined {
+  return process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY || undefined;
+}
 
-function supportsEffort(model: string): boolean {
-  return !EFFORT_UNSUPPORTED.test(model);
+function ollamaReady(): boolean {
+  return Boolean(process.env.OLLAMA_API_KEY || process.env.OLLAMA_BASE_URL);
+}
+
+function provider(): Provider | null {
+  const explicit = process.env.AI_PROVIDER?.trim().toLowerCase();
+  if (explicit === "huggingface" || explicit === "hf") return hfToken() ? "huggingface" : null;
+  if (explicit === "ollama") return ollamaReady() ? "ollama" : null;
+  if (explicit === "anthropic") return process.env.ANTHROPIC_API_KEY ? "anthropic" : null;
+  if (hfToken()) return "huggingface";
+  if (ollamaReady()) return "ollama";
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  return null;
 }
 
 /**
- * Effort tunes how hard the model works before answering, on models that
- * support it. Pricing a job is the one call here with real judgement in it —
- * realistic labour hours and material costs — so it gets `medium`. The
- * message drafters are writing three sentences in a known voice; `low` is
- * cheaper and faster and the output is indistinguishable.
+ * gpt-oss-120b by default on both open-model providers. It's the strongest
+ * open model that is cheap to run, reliable at producing strict JSON, and
+ * has a reasoning dial — the quote drafter's pricing judgement is the one
+ * call here that benefits from thinking. It's also hosted on both Hugging
+ * Face and Ollama Cloud, so switching provider doesn't change the output.
+ *
+ * AI_MODEL overrides it (e.g. "Qwen/Qwen3-235B-A22B-Instruct-2507" on
+ * Hugging Face, or "qwen3:32b" on a self-hosted Ollama).
+ */
+function modelFor(p: Provider): string {
+  const override = process.env.AI_MODEL;
+  if (p === "huggingface") return override || "openai/gpt-oss-120b";
+  if (p === "ollama") return override || "gpt-oss:120b";
+  return process.env.ANTHROPIC_MODEL || override || "claude-haiku-4-5";
+}
+
+/**
+ * Pricing a job has real judgement in it — realistic labour hours and
+ * material costs — so it gets `medium`. The message drafters are writing
+ * three sentences in a known voice; `low` is cheaper and faster.
  */
 type Effort = "low" | "medium";
 
-function outputConfig<T>(effort: Effort, format: T) {
-  return supportsEffort(MODEL) ? { effort, format } : { format };
-}
-
 /**
  * Bounded ceilings — an unbounded `max_tokens` on a free tier is an unbounded
- * bill. The headroom above the visible answer is for thinking tokens, which
- * count against this limit on the models that think; Haiku doesn't, so it
- * never gets near these.
+ * bill. The headroom above the visible answer is for reasoning tokens, which
+ * count against this limit on the models that think.
  */
 const MAX_TOKENS_PRICING = 8000;
 const MAX_TOKENS_WRITING = 4000;
 
-let client: Anthropic | null = null;
-
-/**
- * An org-level API key has no workspace attached, and the API rejects it with
- * a 400 unless the request names one. A key created inside a workspace
- * carries that already and needs nothing here — so the header is sent only
- * when ANTHROPIC_WORKSPACE_ID is set, and both kinds of key work.
- */
-function getClient(): Anthropic {
-  if (!client) {
-    const workspace = process.env.ANTHROPIC_WORKSPACE_ID;
-    client = new Anthropic(
-      workspace
-        ? { defaultHeaders: { "anthropic-workspace-id": workspace } }
-        : {}
-    );
-  }
-  return client;
-}
+/** Serverless functions shouldn't hang on a stalled upstream. */
+const REQUEST_TIMEOUT_MS = 60_000;
 
 export function aiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return provider() !== null;
 }
 
 export function aiNotConfigured(): NextResponse {
@@ -92,57 +90,87 @@ export function aiNotConfigured(): NextResponse {
     {
       error: "AI not configured",
       detail:
-        "The site owner hasn't added an ANTHROPIC_API_KEY yet, so this feature can't run. No result was fabricated.",
+        "The site owner hasn't added an AI key (HF_TOKEN, OLLAMA_API_KEY or ANTHROPIC_API_KEY) yet, so this feature can't run. No result was fabricated.",
     },
     { status: 503 }
   );
 }
 
 /**
- * Map an SDK error onto an honest status and a message a contractor standing
- * in a driveway can act on. Typed classes, never string matching.
+ * An error from the Hugging Face or Ollama HTTP API. `status` is the
+ * upstream status, or 0 when the request never got a response.
+ */
+class ProviderError extends Error {
+  constructor(message: string, readonly upstreamStatus: number) {
+    super(message);
+  }
+}
+
+function busy() {
+  return NextResponse.json(
+    { error: "The AI is busy right now. Try again in a moment." },
+    { status: 429 }
+  );
+}
+function badKey() {
+  console.error("[ai] bad API key");
+  return NextResponse.json(
+    { error: "The AI isn't set up correctly. Nothing was drafted." },
+    { status: 503 }
+  );
+}
+function unreachable() {
+  return NextResponse.json(
+    { error: "Couldn't reach the AI service. Check back shortly." },
+    { status: 502 }
+  );
+}
+function rejected(message: string) {
+  // Almost always an account or setup problem — no credits, a model the
+  // provider doesn't host, a retired model id. The contractor can't fix any
+  // of those, so don't invite a retry that will fail the same way. The real
+  // reason goes to the log for whoever runs the site.
+  console.error("[ai] request rejected:", message);
+  return NextResponse.json(
+    {
+      error: "AI unavailable",
+      detail:
+        "The AI provider rejected the request, so nothing was drafted. This is a setup or billing problem on the site's account, not something you did.",
+    },
+    { status: 503 }
+  );
+}
+function upstreamError(status: number, message: string) {
+  console.error("[ai] API error:", status, message);
+  return NextResponse.json(
+    { error: "The AI service returned an error. Please try again in a moment." },
+    { status: 502 }
+  );
+}
+
+/**
+ * Map a provider error onto an honest status and a message a contractor
+ * standing in a driveway can act on.
  */
 export function aiErrorResponse(err: unknown): NextResponse {
-  if (err instanceof Anthropic.RateLimitError) {
-    return NextResponse.json(
-      { error: "The AI is busy right now. Try again in a moment." },
-      { status: 429 }
-    );
+  if (err instanceof ProviderError) {
+    const s = err.upstreamStatus;
+    if (s === 0) return unreachable();
+    if (s === 429) return busy();
+    if (s === 401 || s === 403) return badKey();
+    if (s === 400 || s === 402 || s === 404 || s === 422) return rejected(err.message);
+    return upstreamError(s, err.message);
   }
-  if (err instanceof Anthropic.AuthenticationError) {
-    console.error("[ai] bad API key");
+  if (err instanceof Anthropic.RateLimitError) return busy();
+  if (err instanceof Anthropic.AuthenticationError) return badKey();
+  if (err instanceof Anthropic.APIConnectionError) return unreachable();
+  if (err instanceof Anthropic.BadRequestError) return rejected(err.message);
+  if (err instanceof Anthropic.APIError) return upstreamError(err.status ?? 0, err.message);
+  // Errors thrown by the helpers below carry a user-facing message + status.
+  if (err instanceof Error && typeof (err as { status?: unknown }).status === "number") {
     return NextResponse.json(
-      { error: "The AI isn't set up correctly. Nothing was drafted." },
-      { status: 503 }
-    );
-  }
-  if (err instanceof Anthropic.APIConnectionError) {
-    return NextResponse.json(
-      { error: "Couldn't reach the AI service. Check back shortly." },
-      { status: 502 }
-    );
-  }
-  if (err instanceof Anthropic.BadRequestError) {
-    // Almost always an account or setup problem — no credits, an unscoped
-    // key, a retired model id. The contractor can't fix any of those, so
-    // don't invite a retry that will fail the same way. The real reason goes
-    // to the log for whoever runs the site. Running out of credits is the
-    // most likely version of this in production.
-    console.error("[ai] request rejected:", err.message);
-    return NextResponse.json(
-      {
-        error: "AI unavailable",
-        detail:
-          "The AI provider rejected the request, so nothing was drafted. This is a setup or billing problem on the site's account, not something you did.",
-      },
-      { status: 503 }
-    );
-  }
-  if (err instanceof Anthropic.APIError) {
-    console.error("[ai] API error:", err.status, err.message);
-    return NextResponse.json(
-      { error: "The AI service returned an error. Please try again in a moment." },
-      { status: 502 }
+      { error: err.message },
+      { status: (err as unknown as { status: number }).status }
     );
   }
   console.error("[ai] unexpected error:", err);
@@ -152,21 +180,197 @@ export function aiErrorResponse(err: unknown): NextResponse {
   );
 }
 
-/** A refusal or an empty parse is reported, never silently papered over. */
-function assertUsable<T>(parsed: T | null | undefined, stopReason: string | null): T {
-  if (stopReason === "refusal") {
-    throw Object.assign(
-      new Error("The AI declined to draft that. Try rewording the job details."),
-      { status: 422 }
+function unusable(message: string, status: number): Error {
+  return Object.assign(new Error(message), { status });
+}
+
+const DRAFT_FAILED = "The AI couldn't draft that. Please try again.";
+
+// ------------------------------------------------------------------
+// Anthropic: native structured outputs.
+// ------------------------------------------------------------------
+
+/**
+ * `output_config.effort` is rejected with a 400 on Haiku 4.5 and Sonnet 4.5,
+ * so it's attached only when the configured model actually takes it.
+ */
+const EFFORT_UNSUPPORTED = /haiku-4-5|sonnet-4-5|-3-5-|-3-opus|-3-haiku/;
+
+let anthropic: Anthropic | null = null;
+
+/**
+ * An org-level API key has no workspace attached, and the API rejects it with
+ * a 400 unless the request names one — so the header is sent only when
+ * ANTHROPIC_WORKSPACE_ID is set, and both kinds of key work.
+ */
+function getAnthropic(): Anthropic {
+  if (!anthropic) {
+    const workspace = process.env.ANTHROPIC_WORKSPACE_ID;
+    anthropic = new Anthropic(
+      workspace ? { defaultHeaders: { "anthropic-workspace-id": workspace } } : {}
     );
   }
-  if (parsed === null || parsed === undefined) {
-    throw Object.assign(
-      new Error("The AI couldn't draft that. Please try again."),
-      { status: 502 }
-    );
+  return anthropic;
+}
+
+async function anthropicJSON<T extends z.ZodType>(
+  schema: T,
+  system: string,
+  user: string,
+  effort: Effort,
+  maxTokens: number
+): Promise<z.infer<T>> {
+  const model = modelFor("anthropic");
+  const format = zodOutputFormat(schema);
+  const res = await getAnthropic().messages.parse({
+    model,
+    max_tokens: maxTokens,
+    system,
+    output_config: EFFORT_UNSUPPORTED.test(model) ? { format } : { effort, format },
+    messages: [{ role: "user", content: user }],
+  });
+  if (res.stop_reason === "refusal") {
+    throw unusable("The AI declined to draft that. Try rewording the job details.", 422);
   }
-  return parsed;
+  if (res.parsed_output === null || res.parsed_output === undefined) {
+    throw unusable(DRAFT_FAILED, 502);
+  }
+  return res.parsed_output as z.infer<T>;
+}
+
+// ------------------------------------------------------------------
+// Hugging Face / Ollama: OpenAI-compatible chat completions.
+// ------------------------------------------------------------------
+
+function openAICompatTarget(p: "huggingface" | "ollama"): { url: string; key?: string } {
+  if (p === "huggingface") {
+    return { url: "https://router.huggingface.co/v1/chat/completions", key: hfToken() };
+  }
+  // With only a key, talk to Ollama Cloud. OLLAMA_BASE_URL points at a
+  // self-hosted server instead (it must be reachable from the deployment —
+  // localhost only works in local dev).
+  const base = (process.env.OLLAMA_BASE_URL || "https://ollama.com").replace(/\/+$/, "");
+  return { url: `${base}/v1/chat/completions`, key: process.env.OLLAMA_API_KEY || undefined };
+}
+
+/**
+ * Open models occasionally wrap JSON in a code fence or add a sentence
+ * around it even when told not to. Take the outermost object, and let the
+ * schema decide whether it's any good.
+ */
+function extractJSON(text: string): unknown {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end <= start) return undefined;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return undefined;
+  }
+}
+
+async function postChat(
+  url: string,
+  key: string | undefined,
+  body: Record<string, unknown>
+): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    throw new ProviderError(err instanceof Error ? err.message : String(err), 0);
+  }
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 500);
+    throw new ProviderError(`${res.status} ${detail}`, res.status);
+  }
+  const data = (await res.json().catch(() => null)) as {
+    choices?: { message?: { content?: string | null; refusal?: string | null } }[];
+  } | null;
+  const message = data?.choices?.[0]?.message;
+  if (message?.refusal) {
+    throw unusable("The AI declined to draft that. Try rewording the job details.", 422);
+  }
+  return message?.content ?? "";
+}
+
+async function openAICompatJSON<T extends z.ZodType>(
+  p: "huggingface" | "ollama",
+  schema: T,
+  system: string,
+  user: string,
+  effort: Effort,
+  maxTokens: number
+): Promise<z.infer<T>> {
+  const { url, key } = openAICompatTarget(p);
+  const model = modelFor(p);
+  const jsonSchema = z.toJSONSchema(schema);
+  // The schema also goes in the prompt: not every host behind the Hugging
+  // Face router enforces response_format, and the prompt is what keeps
+  // those ones on track.
+  const messages = [
+    {
+      role: "system",
+      content: `${system}
+
+Respond with ONLY a JSON object matching this JSON Schema — no prose, no code fences:
+${JSON.stringify(jsonSchema)}`,
+    },
+    { role: "user", content: user },
+  ];
+  const full: Record<string, unknown> = {
+    model,
+    messages,
+    max_tokens: maxTokens,
+    temperature: 0.4,
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "draft", schema: jsonSchema, strict: true },
+    },
+    // Only reasoning models take this; others may reject an unknown field.
+    ...(/gpt-oss|deepseek-r|qwq/i.test(model) ? { reasoning_effort: effort } : {}),
+  };
+
+  let content: string;
+  try {
+    content = await postChat(url, key, full);
+  } catch (err) {
+    // Some hosts reject response_format or reasoning_effort outright. The
+    // prompt still carries the schema, so retry once with the plain request
+    // rather than failing the contractor over an optional feature.
+    if (!(err instanceof ProviderError) || err.upstreamStatus !== 400) throw err;
+    console.warn("[ai] retrying without structured-output options:", err.message);
+    content = await postChat(url, key, { model, messages, max_tokens: maxTokens, temperature: 0.4 });
+  }
+
+  const parsed = schema.safeParse(extractJSON(content));
+  if (!parsed.success) {
+    console.error("[ai] response didn't match the schema:", content.slice(0, 500));
+    throw unusable(DRAFT_FAILED, 502);
+  }
+  return parsed.data;
+}
+
+/** Ask the configured provider for a JSON object that satisfies `schema`. */
+async function generateJSON<T extends z.ZodType>(
+  schema: T,
+  system: string,
+  user: string,
+  effort: Effort,
+  maxTokens: number
+): Promise<z.infer<T>> {
+  const p = provider();
+  if (!p) throw unusable("AI not configured", 503);
+  if (p === "anthropic") return anthropicJSON(schema, system, user, effort, maxTokens);
+  return openAICompatJSON(p, schema, system, user, effort, maxTokens);
 }
 
 // ------------------------------------------------------------------
@@ -203,20 +407,13 @@ export async function assistQuoteLineItems(
   description: string,
   trade: string
 ): Promise<{ lineItems: LineItem[]; assumptions: string }> {
-  const res = await getClient().messages.parse({
-    model: MODEL,
-    max_tokens: MAX_TOKENS_PRICING,
-    system: QUOTE_ASSIST_PROMPT,
-    output_config: outputConfig("medium", zodOutputFormat(QuoteDraftSchema)),
-    messages: [
-      {
-        role: "user",
-        content: `Trade: ${trade || "general contracting"}\n\nJob description:\n${description}`,
-      },
-    ],
-  });
-
-  const parsed = assertUsable(res.parsed_output, res.stop_reason);
+  const parsed = await generateJSON(
+    QuoteDraftSchema,
+    QUOTE_ASSIST_PROMPT,
+    `Trade: ${trade || "general contracting"}\n\nJob description:\n${description}`,
+    "medium",
+    MAX_TOKENS_PRICING
+  );
   // Still normalised: the schema guarantees shape, not that the numbers are
   // sane. normalizeLineItems clamps negatives and drops empty rows, and the
   // server recomputes every total from these regardless.
@@ -238,14 +435,7 @@ export async function assistQuoteLineItems(
 const MessageSchema = z.object({ message: z.string().min(1) });
 
 async function draftMessage(system: string, context: string): Promise<string> {
-  const res = await getClient().messages.parse({
-    model: MODEL,
-    max_tokens: MAX_TOKENS_WRITING,
-    system,
-    output_config: outputConfig("low", zodOutputFormat(MessageSchema)),
-    messages: [{ role: "user", content: context }],
-  });
-  const parsed = assertUsable(res.parsed_output, res.stop_reason);
+  const parsed = await generateJSON(MessageSchema, system, context, "low", MAX_TOKENS_WRITING);
   const message = parsed.message.trim();
   if (!message) {
     throw Object.assign(new Error("The AI returned an empty draft. Please try again."), {
