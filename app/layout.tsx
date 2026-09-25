@@ -82,9 +82,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/#money" className="transition hover:text-paper">
                 Money found
               </Link>
-              <Link href="/pricing" className="transition hover:text-paper">
-                Pricing
-              </Link>
               <Link href="/#faq" className="transition hover:text-paper">
                 FAQ
               </Link>
@@ -112,11 +109,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div>
               <h4 className="mb-3 font-display text-sm uppercase tracking-[0.14em] text-paper">Product</h4>
               <ul className="space-y-2.5 text-sm text-bone-500">
-                <li>
-                  <Link href="/pricing" className="inline-block min-h-[32px] py-1 transition hover:text-paper">
-                    Pricing
-                  </Link>
-                </li>
                 <li>
                   <Link href="/signup" className="inline-block min-h-[32px] py-1 transition hover:text-paper">
                     Get started

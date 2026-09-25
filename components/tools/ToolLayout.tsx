@@ -129,9 +129,9 @@ export function ToolLayout({
           href="/signup"
           className="btn-primary mt-6 inline-flex font-display text-lg uppercase tracking-wider"
         >
-          Get started free
+          Get started
         </Link>
-        <p className="mt-3 text-xs text-bone-500">No credit card. Your data stays yours.</p>
+        <p className="mt-3 text-xs text-bone-500">Your data stays yours.</p>
       </section>
     </div>
   );

@@ -151,7 +151,7 @@ export default function ToolsPage() {
               href="/signup"
               className="btn-primary mt-5 inline-flex font-display text-lg uppercase tracking-wider"
             >
-              Get started free
+              Get started
             </Link>
           </div>
         </div>

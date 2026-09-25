@@ -85,14 +85,14 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Link href="/signup" className="btn-primary font-display text-xl uppercase tracking-wider sm:!min-h-[60px] sm:!px-10">
-              Get started free
+              Get started
             </Link>
             <Link href="#how-it-works" className="btn-secondary sm:!min-h-[60px]">
               See how it works
             </Link>
           </div>
           <p className="mt-5 text-sm text-bone-500">
-            No credit card. Your data stays yours.
+            Your data stays yours.
           </p>
         </div>
       </section>
@@ -396,10 +396,6 @@ export default function LandingPage() {
               a: "It reads what you've already entered. An accepted quote with no invoice against it is work you may never have billed. A water heater you installed twelve years ago is a replacement call. A customer who paid you three times and hasn't been back in two years is worth a text. Every figure it shows is priced from your own past jobs, and it tells you which ones — where it can't price something honestly, it says so instead of guessing.",
             },
             {
-              q: "What does it cost?",
-              a: "Nothing. Every feature, no limits, no card, no trial counting down. TradeReady is early and what it needs is contractors using it on real jobs and saying where it falls short.",
-            },
-            {
               q: "What happens to my data?",
               a: "It's yours. Your customers, quotes, and invoices are scoped to your account, never shared or sold, and you can download your documents as PDF anytime.",
             },
@@ -429,7 +425,7 @@ export default function LandingPage() {
               before it starts. Get set up in five minutes.
             </p>
             <Link href="/signup" className="btn-primary mt-9 font-display text-xl uppercase tracking-wider sm:!min-h-[60px] sm:!px-12">
-              Get started free
+              Get started
             </Link>
           </div>
         </div>
